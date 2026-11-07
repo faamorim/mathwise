@@ -272,3 +272,4 @@ input.look-num { width: 5em; }
 .look-color { display: inline-flex; align-items: center; gap: 4px; }
 .tmpl-nested { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; padding-left: 8px; border-left: 2px solid #c9d8f0; }
 .tmpl-nested-label { font-size: 11px; color: #556; align-self: center; }
+.btn.ready { border-style: dashed; }

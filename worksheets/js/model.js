@@ -9,7 +9,7 @@
   var STANDARD_FIELDS = ['name', 'date', 'period', 'block'];
   var HANDOUT_ANSWERS = ['none', 'final'];
   var KEY_MODES = ['none', 'final', 'worked'];
-  var BLOCK_KINDS = ['heading', 'text', 'example', 'question', 'table', 'image', 'pageBreak'];
+  var BLOCK_KINDS = ['heading', 'text', 'example', 'question', 'table', 'image', 'notes', 'pageBreak'];
 
   function letter(i) {
     // a, b, ..., z, aa, ab, ...
@@ -57,6 +57,7 @@
         rows: [['', ''], ['', '']]
       };
       case 'image': return { kind: 'image', src: '', width: 50, align: 'center', caption: '' };
+      case 'notes': return { kind: 'notes', title: 'In my own words', prompt: 'Write what you learned today, as if explaining it to a friend.', lines: 6 };
       case 'pageBreak': return { kind: 'pageBreak' };
     }
     throw new Error('Unknown block kind: ' + kind);
@@ -124,6 +125,11 @@
     if (b.kind === 'table') normalizeTable(b);
     if (b.kind === 'text' && typeof b.content !== 'string') b.content = '';
     if (b.kind === 'heading' && typeof b.text !== 'string') b.text = '';
+    if (b.kind === 'notes') {
+      if (typeof b.title !== 'string') b.title = '';
+      if (typeof b.prompt !== 'string') b.prompt = '';
+      if (!isNum(b.lines) || b.lines < 0) b.lines = 6;
+    }
   }
 
   function hasParts(q) { return Array.isArray(q.parts) && q.parts.length > 0; }

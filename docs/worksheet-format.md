@@ -114,6 +114,17 @@ fraction, `^` for a power, `*` for ×, or use its on-screen math keyboard. With 
 inside existing math it edits that math; otherwise it inserts new `$…$`. The file still
 stores plain LaTeX.
 
+## Thinking and reflection blocks
+
+- `"lined": true` on a question (or on one part) draws ruled lines in its work space, one
+  per line of `space`, for written answers such as a reason or an explanation.
+- A `notes` block is a ruled box for the student's own words (notes, a summary, a note to
+  their future self): `{ "kind": "notes", "title": "In my own words", "prompt": "…",
+  "lines": 6 }`. It is not numbered and not marked.
+- The editor's **Add block** has ready-made ones: **Thinking question** (an open question
+  with lines), **Make your own question** (a lined part for the question and a part to
+  solve it) and **My notes**.
+
 ## Look (themes)
 
 How the pages look is kept apart from what they say. A document may have

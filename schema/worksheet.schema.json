@@ -93,7 +93,7 @@
       "type": "object",
       "required": ["kind"],
       "properties": {
-        "kind": { "enum": ["heading", "text", "example", "question", "table", "image", "pageBreak"] },
+        "kind": { "enum": ["heading", "text", "example", "question", "table", "image", "notes", "pageBreak"] },
         "id": { "type": "string", "description": "Optional stable id (useful for generators)." },
         "generator": {
           "type": "object",
@@ -123,7 +123,8 @@
         { "if": { "properties": { "kind": { "const": "text" } } }, "then": { "$ref": "#/$defs/text" } },
         { "if": { "properties": { "kind": { "enum": ["question", "example"] } } }, "then": { "$ref": "#/$defs/question" } },
         { "if": { "properties": { "kind": { "const": "table" } } }, "then": { "$ref": "#/$defs/table" } },
-        { "if": { "properties": { "kind": { "const": "image" } } }, "then": { "$ref": "#/$defs/image" } }
+        { "if": { "properties": { "kind": { "const": "image" } } }, "then": { "$ref": "#/$defs/image" } },
+        { "if": { "properties": { "kind": { "const": "notes" } } }, "then": { "$ref": "#/$defs/notes" } }
       ]
     },
     "heading": {
@@ -153,6 +154,7 @@
         "solution": { "$ref": "#/$defs/markup", "description": "Worked solution, shown only in a worked teacher key. One step per line." },
         "columns": { "type": "integer", "minimum": 1, "maximum": 4, "default": 1 },
         "boxed": { "type": "boolean", "default": true, "description": "Draw boxes around the parts." },
+        "lined": { "type": "boolean", "default": false, "description": "Ruled lines in the work space, for written answers." },
         "parts": {
           "type": "array",
           "items": {
@@ -165,6 +167,7 @@
               "solution": { "$ref": "#/$defs/markup", "description": "Worked solution for the teacher key." },
               "marks": { "type": "number", "minimum": 0 },
               "space": { "$ref": "#/$defs/space" },
+              "lined": { "type": "boolean", "description": "Ruled lines for this part (overrides the question's lined)." },
               "template": { "$ref": "#/$defs/partTemplate" }
             }
           }
@@ -208,6 +211,14 @@
         "align": { "enum": ["left", "center", "right"] },
         "caption": { "$ref": "#/$defs/markup" },
         "alt": { "type": "string" }
+      }
+    },
+    "notes": {
+      "description": "A ruled box for the student's own words: notes, a summary, a note to their future self. Not numbered or marked.",
+      "properties": {
+        "title": { "$ref": "#/$defs/markup" },
+        "prompt": { "$ref": "#/$defs/markup" },
+        "lines": { "type": "integer", "minimum": 0, "default": 6 }
       }
     }
   }

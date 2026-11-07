@@ -32,9 +32,12 @@
 
   // part: the part's index when the space belongs to a part (lets the editor
   // map a dragged work space back to the question or part it came from).
-  function spaceEl(lines, answerHtml, part) {
-    var s = el('div', 'space');
+  function spaceEl(lines, answerHtml, part, lined) {
+    var s = el('div', 'space' + (lined ? ' lined' : ''));
     if (part != null) s.dataset.part = part;
+    // Lined: ruled lines to write sentences on (one per line of space), drawn as
+    // real borders so they print without "background graphics".
+    if (lined) for (var n = 0; n < Math.floor(+lines || 0); n++) s.appendChild(el('div', 'rule-line'));
     s.style.minHeight = 'calc(var(--line) * ' + Math.max(0, +lines || 0) + ')';
     if (answerHtml) s.appendChild(el('div', 'ans', answerHtml));
     return s;
@@ -138,7 +141,7 @@
     if (!parts && !q.table) {
       var sp = q.space != null ? q.space : defaultSpace;
       var ans = opts.showAnswers && qFill.answer ? M.inline(q.answer) : '';
-      if (sp > 0 || ans || opts.nudge) body.appendChild(spaceEl(sp, ans));
+      if (sp > 0 || ans || opts.nudge) body.appendChild(spaceEl(sp, ans, null, !!q.lined));
       out.push(frag(head, index, false));
       return out;
     }
@@ -162,7 +165,7 @@
             cell.appendChild(line);
             var ps = p.space != null ? p.space : partSpace;
             var pa = opts.showAnswers && pFill.answer ? M.inline(p.answer) : '';
-            if (ps > 0 || pa || opts.nudge) cell.appendChild(spaceEl(ps, pa, j));
+            if (ps > 0 || pa || opts.nudge) cell.appendChild(spaceEl(ps, pa, j, p.lined != null ? !!p.lined : !!q.lined));
           } else {
             cell.classList.add('empty');
           }
@@ -220,6 +223,14 @@
           break;
         case 'table':
           fr = tableFragments(b, i, opts, true);
+          break;
+        case 'notes':
+          // A ruled box for the student's own words (notes, summary, note to future self).
+          var nb = el('div', 'ws-notes');
+          if (b.title) nb.appendChild(el('div', 'notes-title', M.inline(b.title)));
+          if (b.prompt) nb.appendChild(el('div', 'notes-prompt', M.html(b.prompt, opts)));
+          nb.appendChild(spaceEl(+b.lines || 0, '', null, true));
+          fr.push(frag(nb, i, false));
           break;
         case 'question':
         case 'example':
