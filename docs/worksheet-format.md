@@ -114,6 +114,14 @@ fraction, `^` for a power, `*` for ×, or use its on-screen math keyboard. With 
 inside existing math it edits that math; otherwise it inserts new `$…$`. The file still
 stores plain LaTeX.
 
+## Adjusting the layout from the preview
+
+In the handout preview, hover a work area and drag the blue bar at its bottom edge to
+change the work space (¼-line steps). On a part this sets the space of every part of the
+question (`space`); hold **Shift** to set only that part (`parts[i].space`). In a table,
+drag the bar on a column's right edge to change `widths`. Double-click a bar to go back to
+the default. Each drag can be undone.
+
 ## Generated questions
 
 A question block may carry a `generator` object

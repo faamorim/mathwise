@@ -30,8 +30,11 @@
     return { showAnswers: opts.showAnswers, fill: fill };
   }
 
-  function spaceEl(lines, answerHtml) {
+  // part: the part's index when the space belongs to a part (lets the editor
+  // map a dragged work space back to the question or part it came from).
+  function spaceEl(lines, answerHtml, part) {
     var s = el('div', 'space');
+    if (part != null) s.dataset.part = part;
     s.style.minHeight = 'calc(var(--line) * ' + Math.max(0, +lines || 0) + ')';
     if (answerHtml) s.appendChild(el('div', 'ans', answerHtml));
     return s;
@@ -135,7 +138,7 @@
     if (!parts && !q.table) {
       var sp = q.space != null ? q.space : defaultSpace;
       var ans = opts.showAnswers && qFill.answer ? M.inline(q.answer) : '';
-      if (sp > 0 || ans) body.appendChild(spaceEl(sp, ans));
+      if (sp > 0 || ans || opts.nudge) body.appendChild(spaceEl(sp, ans));
       out.push(frag(head, index, false));
       return out;
     }
@@ -159,7 +162,7 @@
             cell.appendChild(line);
             var ps = p.space != null ? p.space : partSpace;
             var pa = opts.showAnswers && pFill.answer ? M.inline(p.answer) : '';
-            if (ps > 0 || pa) cell.appendChild(spaceEl(ps, pa));
+            if (ps > 0 || pa || opts.nudge) cell.appendChild(spaceEl(ps, pa, j));
           } else {
             cell.classList.add('empty');
           }
