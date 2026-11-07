@@ -179,14 +179,15 @@
   }
   // Put a whole item into a block: its prompt, and either its parts or its answer.
   function wholeInto(out, w, steps) {
+    var old = out.parts;
     out.prompt = w.prompt;   // a whole-question generator writes the full prompt
     delete out.answer; delete out.solution; delete out.parts;
     if (w.parts) {
-      out.parts = w.parts.map(function (p) {
+      out.parts = w.parts.map(function (p, i) {
         var it = { prompt: p.prompt, answer: p.answer };
         if (steps && p.steps && p.steps.length) it.solution = p.steps.join('\n');
         if (p.thinking) it.thinking = true;
-        return it;
+        return keepExtras(it, old && old[i]);   // marks, space, label stay with their position
       });
       return out;
     }

@@ -56,9 +56,9 @@
     var keys = Object.keys(story.values);
     var variables = keys.map(function (k) {
       var s = story.values[k];
-      if (s.name) return { key: k, label: 'Name (' + k + ')', kind: 'choice', values: D.names.map(function (n) { return { value: n, label: n }; }) };
-      if (s.fact) return { key: k, label: 'Which ' + k + ' (real data)', kind: 'choice', values: D[s.fact].items.map(function (r) { return { value: r.name, label: r.name }; }) };
-      return { key: k, label: k, kind: 'int', min: 1, max: 100000 };
+      if (s.name) return { key: k, label: s.label || 'Name', kind: 'choice', values: D.names.map(function (n) { return { value: n, label: n }; }) };
+      if (s.fact) return { key: k, label: (s.label || k) + ' (real data)', kind: 'choice', values: D[s.fact].items.map(function (r) { return { value: r.name, label: r.name }; }) };
+      return { key: k, label: s.label || k, kind: 'int', min: 1, max: 100000 };
     });
     variables.push({ key: 'thinking', label: 'Include the thinking questions', kind: 'toggle' });
 

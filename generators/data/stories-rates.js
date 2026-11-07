@@ -5,6 +5,7 @@
  * A story has:
  *   values  every number or name in it, marked as one of
  *             { name: true }                      a first name from Mathwise.data.names
+ *           any value may have label: 'Minutes' (shown when a teacher edits the question)
  *             { vary: [lo, hi], step? }           a whole number that changes each time
  *             { choose: [..] }                    one of these numbers each time
  *             { fact: 'planets' }                 which fact (row of a data table); facts never change
@@ -30,9 +31,9 @@
   S.push({
     topic: 'rates', id: 'typing-race', label: 'Two people typing (seconds vs minutes)',
     values: {
-      a: { name: true }, b: { name: true },
-      wordsA: { vary: [10, 20] }, secsA: { choose: [15, 20, 30] },
-      wordsB: { vary: [60, 150], step: 5 }, minsB: { choose: [2, 3, 4, 5] }
+      a: { name: true, label: 'First person' }, b: { name: true, label: 'Second person' },
+      wordsA: { vary: [10, 20], label: 'Words (first person)' }, secsA: { choose: [15, 20, 30], label: 'Seconds (first person)' },
+      wordsB: { vary: [60, 150], step: 5, label: 'Words (second person)' }, minsB: { choose: [2, 3, 4, 5], label: 'Minutes (second person)' }
     },
     ok: function (v) { return v.a !== v.b && v.wordsA * 60 % v.secsA === 0 && v.wordsB % v.minsB === 0 && v.wordsA * 60 / v.secsA !== v.wordsB / v.minsB; },
     okMessage: 'Use two different names, seconds that divide 60, words for the second person that divide evenly by the minutes, and different speeds.',
@@ -72,7 +73,7 @@
 
   S.push({
     topic: 'rates', id: 'swim-laps', label: 'Swimming laps',
-    values: { name: { name: true }, laps: { vary: [2, 6] }, mins: { choose: [2, 3, 4, 5, 6] }, times: { vary: [3, 6] } },
+    values: { name: { name: true }, laps: { vary: [2, 6], label: 'Laps' }, mins: { choose: [2, 3, 4, 5, 6], label: 'Minutes' }, times: { vary: [3, 6], label: 'Part c: how many times as many laps' } },
     ok: function (v) { return 60 % v.mins === 0; },
     okMessage: 'The minutes must divide 60 evenly.',
     stem: '%name% takes %mins% minutes to swim %laps% laps in the pool.',
@@ -100,7 +101,7 @@
 
   S.push({
     topic: 'rates', id: 'hose', label: 'Filling a tank with a hose',
-    values: { litres: { vary: [8, 30] }, mins: { choose: [2, 3, 4, 5, 6, 10] }, times: { vary: [8, 30] } },
+    values: { litres: { vary: [8, 30], label: 'Litres' }, mins: { choose: [2, 3, 4, 5, 6, 10], label: 'Minutes' }, times: { vary: [8, 30], label: 'Tank size, in groups of those litres' } },
     ok: function (v) { return 60 % v.mins === 0; },
     okMessage: 'The minutes must divide 60 evenly.',
     stem: 'A garden hose puts %litres% litres of water into a tank every %mins% minutes. The tank holds %capacity% litres.',
@@ -125,7 +126,7 @@
 
   S.push({
     topic: 'rates', id: 'heartbeat', label: 'Heartbeats',
-    values: { name: { name: true }, beats: { vary: [20, 26] }, secs: { choose: [15, 20] } },
+    values: { name: { name: true }, beats: { vary: [20, 26], label: 'Heartbeats' }, secs: { choose: [15, 20], label: 'Seconds' } },
     ok: function (v) { return 60 % v.secs === 0; },
     okMessage: 'The seconds must divide 60 evenly.',
     stem: 'Sitting in class, %name% counts %beats% heartbeats in %secs% seconds.',
