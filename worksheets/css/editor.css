@@ -238,3 +238,16 @@ input.gen-num { width: 5.5em; }
 .math-foot { align-items: center; }
 .math-foot .spacer { flex: 1; }
 .math-tex { font-size: 12px; color: #556; max-width: 60%; overflow-wrap: anywhere; }
+
+/* Unlinked (template) questions */
+.tmpl-items { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.tmpl-item { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; padding: 4px 0; border-top: 1px dashed #d5dbe5; }
+.tmpl-item:first-child { border-top: 0; }
+.tmpl-item > .lbl { font-weight: 600; min-width: 1.6em; padding-bottom: 6px; }
+.tmpl-vars { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.tmpl-field > span { font-size: 11px; }
+input.tmpl-var { width: 4.5em; }
+input.tmpl-var.wide { width: 10em; }
+.tmpl-typed { color: #8a5a00; border-color: #e6c98a; background: #fdf8ec; }
+.tmpl-help > summary { cursor: pointer; font-size: 12px; color: #2a4f86; }
+.tmpl-help p { margin: 4px 0 0; }

@@ -132,3 +132,9 @@ In the editor:
   **Reset to defaults** removes the stored `params`.
 - Only values that differ from the defaults are stored when a question is added; a
   setting changed later is stored as its real value.
+- **✂ Unlink to edit numbers** keeps a generated question's parts but stops using the
+  seed (stored as `template`, see generator-api.md §6). Each part then shows its values
+  (base, exponents, operation, …): change one and the question, answer and worked steps
+  follow. Text you type over by hand is kept as an override (marked "your text"; click it
+  to go back to the template's text) and may use `%name%` placeholders that follow the
+  values. **+ Add part like these** picks one more part with the same settings.

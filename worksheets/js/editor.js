@@ -518,25 +518,77 @@
         h('div', { class: 'field' }, h('span', { text: ' ' }),
           h('button', { class: 'btn small primary', text: '🎲 New seed',
             title: 'Make new questions of the same kind (Undo brings the old ones back)',
-            onclick: function () { redo(function () { G.reroll(doc, i); }); } }))),
+            onclick: function () { redo(function () { G.reroll(doc, i); }); } })),
+        G.canUnlink(q) ? h('div', { class: 'field' }, h('span', { text: ' ' }),
+          h('button', { class: 'btn small', text: '✂ Unlink to edit numbers',
+            title: 'Keep these questions but stop using the seed: change any number, letter or operation and the answer and steps follow',
+            onclick: function () {
+              redo(function () { G.unlink(doc, i); });
+            } })) : null),
       synced ? null : h('p', { class: 'muted warn',
         text: G.available() ? 'Changed by hand: saved with all its text. A new seed replaces your changes.'
           : 'The generator library did not load, so this question cannot be regenerated here.' }),
       settings);
   }
 
+  // An unlinked question: edit the values of each part; answers and steps follow.
+  function templateBox(q) {
+    var G = WS.generated;
+    var gen = G.templateOf(q);
+    if (!gen) {
+      return h('div', { class: 'gen-box edited' },
+        h('span', { class: 'gen-title', text: '✎ Unlinked question: ' + q.template.name }),
+        h('p', { class: 'muted warn', text: 'This template is not available here, so the question is kept exactly as typed.' }));
+    }
+    var items = G.templateItems(q);
+    items.forEach(function (it) { G.captureOverrides(q, it); });
+    var list = h('div', { class: 'tmpl-items' });
+    items.forEach(function (it) {
+      var controls = WS.genPanel.varControls(gen, it.tv.vars, function (vars) {
+        snapshot();
+        var errs = G.setVars(q, it, vars);
+        if (errs.length) { state.undo.pop(); $('btn-undo').disabled = !state.undo.length; return errs; }
+        changed(true);
+        return [];
+      });
+      list.appendChild(h('div', { class: 'tmpl-item' },
+        it.index >= 0 ? h('span', { class: 'lbl', text: model.partLabel(it.index, q.parts[it.index]) }) : null,
+        controls,
+        G.hasOverrides(it) ? h('button', { class: 'btn small tmpl-typed',
+          text: '✎ your text ✕', title: 'Text you typed over (' + Object.keys(it.tv.overrides).join(', ') +
+            ') is kept when values change. Click to go back to the template\'s own text.',
+          onclick: function () { snapshot(); G.clearOverrides(q, it); changed(true); } }) : null));
+    });
+    var names = items.length ? G.placeholders(q, items[0]) : [];
+    return h('div', { class: 'gen-box tmpl-box' },
+      h('div', { class: 'row' },
+        h('span', { class: 'gen-title', text: '✎ Unlinked: ' + gen.title }),
+        h('span', { class: 'muted', text: 'Change a value and the question, answer and steps follow. Text you type over by hand stays.' })),
+      list,
+      h('div', { class: 'row' },
+        gen.whole ? null : h('button', { class: 'btn small', text: '+ Add part like these',
+          title: 'Pick one more part with the same settings',
+          onclick: function () { snapshot(); try { G.addTemplatePart(q); } catch (e) { alert(e.message || e); } changed(true); } }),
+        names.length ? h('details', { class: 'tmpl-help' },
+          h('summary', { text: 'Placeholders for your own text' }),
+          h('p', { class: 'muted', text: 'In a part\'s text, answer or steps you can type these and they follow the values: ' +
+            names.map(function (n) { return '%' + n + '%'; }).join('  ') + '  (%% is a literal %).' })) : null));
+  }
+
   function buildQuestionBody(q, body) {
     var isQ = q.kind === 'question';
     var parts = model.hasParts(q);
     var many = parts || !!q.table;
-    var generated = isQ && WS.generated && WS.generated.isGenerated(q);
-    var whole = generated && WS.generated.descriptor(q) && WS.generated.descriptor(q).whole;
+    var linked = isQ && WS.generated && WS.generated.isGenerated(q);
+    var unlinked = isQ && WS.generated && !linked && WS.generated.isTemplateBlock(q) && !!WS.generated.templateOf(q);
+    var generated = linked || unlinked;
+    var whole = generated && (linked ? WS.generated.descriptor(q) : WS.generated.templateOf(q) || {}).whole;
     if (generated) {
-      // A generated question is mostly driven by its settings: show those, the
-      // instructions and the layout, and fold the generated text away until the
-      // teacher wants to read or change it by hand.
-      body.appendChild(generatorBox(q));
-      var synced = WS.generated.available() && WS.generated.inSync(state.doc, state.doc.blocks.indexOf(q));
+      // A generated question is mostly driven by its settings (or, unlinked, by its
+      // values): show those, the instructions and the layout, and fold the text away
+      // until the teacher wants to read or change it by hand.
+      body.appendChild(linked ? generatorBox(q) : templateBox(q));
+      var synced = unlinked || (WS.generated.available() && WS.generated.inSync(state.doc, state.doc.blocks.indexOf(q)));
       if (!whole) {
         body.appendChild(field('Instructions', textInput(q, 'prompt', { placeholder: 'e.g. Simplify' })));
       }
@@ -556,8 +608,8 @@
           if (ev.target.open) { state.partsOpen.add(q); state.partsClosed.delete(q); }
           else { state.partsOpen.delete(q); state.partsClosed.add(q); }
         } },
-        h('summary', { text: (parts ? 'Show the ' + n + ' generated part' + (n === 1 ? '' : 's') : 'Show the generated question') +
-          ' (label, answers, steps, edit by hand)' }));
+        h('summary', { text: (parts ? 'Show the ' + n + (linked ? ' generated' : '') + ' part' + (n === 1 ? '' : 's')
+          : 'Show the ' + (linked ? 'generated ' : '') + 'question') + ' (label, answers, steps, edit by hand)' }));
       body.appendChild(more);
       body = more;
     }

@@ -113,6 +113,10 @@
 
   // The document as it is saved: generated blocks that match their generator lose their parts.
   function compact(doc) {
+    // Unlinked questions: record text typed over by hand as overrides before saving.
+    doc.blocks.forEach(function (b) {
+      if (isTemplateBlock(b) && templateOf(b)) templateItems(b).forEach(function (it) { captureOverrides(b, it); });
+    });
     var out = JSON.parse(JSON.stringify(doc));
     doc.blocks.forEach(function (b, i) {
       if (!isGenerated(b) || !inSync(doc, i)) return;
@@ -122,6 +126,131 @@
       if (gen.whole || o.prompt === gen.prompt) delete o.prompt;
     });
     return out;
+  }
+
+  // ---------- unlinked questions (question templates, docs/generator-api.md §6) ----------
+  //
+  // An unlinked block has `template: { name, params }` and no generator/seed; each
+  // part has `template: { vars, overrides? }` (a `whole` template keeps vars and
+  // overrides on block.template). Its text is always stored, so it shows anywhere.
+
+  function isTemplateBlock(b) {
+    return !!(b && b.kind === 'question' && !b.generator && b.template && b.template.name);
+  }
+
+  function templateOf(b) {
+    if (!available() || !isTemplateBlock(b)) return null;
+    try { return lib().get(b.template.name); } catch (e) { return null; }
+  }
+
+  // Can block b (a generated question) be unlinked here?
+  function canUnlink(b) {
+    var g = isGenerated(b) && genOf(b);
+    return !!(g && lib().isTemplate && lib().isTemplate(g));
+  }
+
+  // Turn generated block i into an unlinked template block with the same questions.
+  // The block object is updated in place (the editor keeps its card open).
+  function unlink(doc, i) {
+    var b = doc.blocks[i];
+    var fresh = lib().unlink(b, { docSeed: doc.seed, blockNumber: i + 1 });
+    Object.keys(b).forEach(function (k) { delete b[k]; });
+    Object.keys(fresh).forEach(function (k) { b[k] = fresh[k]; });
+    return b;
+  }
+
+  // The things in block b that carry vars: [{ target, tv, index }] where `target`
+  // holds the text (prompt/answer/solution) and `tv` holds { vars, overrides }.
+  function templateItems(b) {
+    var g = templateOf(b);
+    if (!g) return [];
+    if (g.whole) return b.template.vars ? [{ target: b, tv: b.template, index: -1 }] : [];
+    return (b.parts || []).map(function (p, i) { return p.template && p.template.vars ? { target: p, tv: p.template, index: i } : null; })
+      .filter(Boolean);
+  }
+
+  function textOf(target) {
+    return { prompt: target.prompt || '', answer: target.answer || '', steps: target.solution ? target.solution.split('\n') : [] };
+  }
+
+  function renderSafe(name, vars, overrides) {
+    var r = lib().render(name, vars, { output: 'steps', overrides: overrides, noThrow: true });
+    return r.errors ? null : r;
+  }
+
+  // Record what the teacher typed over the rendered text as overrides (and drop
+  // overrides that now match the plain rendering). An override that still renders
+  // to the text shown is kept as it is, so %name% placeholders survive.
+  function captureOverrides(b, item) {
+    var name = b.template.name;
+    var plain = renderSafe(name, item.tv.vars);
+    if (!plain) return;
+    var cur = item.tv.overrides || {};
+    var withOv = renderSafe(name, item.tv.vars, cur) || plain;
+    var now = textOf(item.target);
+    var next = {};
+    ['prompt', 'answer', 'steps'].forEach(function (f) {
+      var shown = f === 'steps' ? JSON.stringify(now.steps) : now[f];
+      var a = f === 'steps' ? JSON.stringify(withOv.steps || []) : (withOv[f] || '');
+      var p = f === 'steps' ? JSON.stringify(plain.steps || []) : (plain[f] || '');
+      if (cur[f] != null && shown === a) next[f] = cur[f];
+      else if (shown !== p) next[f] = now[f];
+    });
+    if (Object.keys(next).length) item.tv.overrides = next; else delete item.tv.overrides;
+  }
+
+  function hasOverrides(item) { return !!(item.tv.overrides && Object.keys(item.tv.overrides).length); }
+
+  function applyRender(target, r) {
+    target.prompt = r.prompt;
+    target.answer = r.answer;
+    if (r.steps && r.steps.length) target.solution = r.steps.join('\n'); else delete target.solution;
+  }
+
+  /**
+   * Change the vars of one item of template block b; the text re-renders and
+   * anything typed over by hand stays. Returns a list of problems (nothing is
+   * changed when there are any).
+   */
+  function setVars(b, item, vars) {
+    captureOverrides(b, item);
+    var r = lib().render(b.template.name, vars, { output: 'steps', overrides: item.tv.overrides, noThrow: true });
+    if (r.errors) return r.errors;
+    item.tv.vars = vars;
+    applyRender(item.target, r);
+    return [];
+  }
+
+  // Drop the hand-typed text of one item: back to what the template writes.
+  function clearOverrides(b, item) {
+    delete item.tv.overrides;
+    var r = renderSafe(b.template.name, item.tv.vars);
+    if (r) applyRender(item.target, r);
+  }
+
+  // One more part like the others, picked with a fresh seed from the stored settings.
+  function addTemplatePart(b) {
+    var g = templateOf(b);
+    if (!g || g.whole) return null;
+    b.parts = b.parts || [];
+    var n = b.parts.length;
+    var seed = newSeed();
+    var seen = {};
+    b.parts.forEach(function (p) { seen[p.prompt] = true; });
+    var vars, r;
+    for (var attempt = 0; attempt < 30; attempt++) {
+      vars = lib().pick(g.name, b.template.params || {}, seed + ':' + attempt, { index: n, count: n + 1 });
+      r = lib().render(g.name, vars, { output: 'steps' });
+      if (!seen[r.prompt]) break;
+    }
+    var part = { template: { vars: vars } };
+    applyRender(part, r);
+    b.parts.push(part);
+    return part;
+  }
+
+  function placeholders(b, item) {
+    try { return lib().placeholders(b.template.name, item.tv.vars); } catch (e) { return []; }
   }
 
   // The generator's descriptor (null when the library or the generator is missing).
@@ -141,6 +270,17 @@
     compact: compact,
     title: title,
     descriptor: descriptor,
+    isTemplateBlock: isTemplateBlock,
+    templateOf: templateOf,
+    canUnlink: canUnlink,
+    unlink: unlink,
+    templateItems: templateItems,
+    captureOverrides: captureOverrides,
+    hasOverrides: hasOverrides,
+    setVars: setVars,
+    clearOverrides: clearOverrides,
+    addTemplatePart: addTemplatePart,
+    placeholders: placeholders,
     newSeed: newSeed
   };
 })(window.WS = window.WS || {});
