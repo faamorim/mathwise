@@ -52,6 +52,22 @@
       }
     },
     "paper": { "enum": ["letter", "a4"], "default": "letter" },
+    "theme": {
+      "type": "object",
+      "description": "How the pages look, not what they say: a built-in theme name plus any changed settings. Missing = Classic. See docs/worksheet-format.md.",
+      "properties": {
+        "name": { "enum": ["classic", "rounded", "soft", "serif", "bold"] },
+        "font": { "enum": ["sans", "serif", "rounded", "friendly", "mono"] },
+        "fontSize": { "type": "number", "minimum": 9, "maximum": 16 },
+        "ink": { "type": "string" },
+        "accent": { "type": "string" },
+        "rule": { "type": "string" },
+        "lineWidth": { "type": "number", "minimum": 0.5, "maximum": 3 },
+        "boxes": { "enum": ["grid", "cards"] },
+        "corners": { "type": "number", "minimum": 0, "maximum": 16 },
+        "shade": { "type": "string" }
+      }
+    },
     "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } }
   },
   "$defs": {

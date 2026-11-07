@@ -264,3 +264,9 @@ body.nudging-v, body.nudging-v * { cursor: ns-resize !important; user-select: no
 body.nudging-h, body.nudging-h * { cursor: ew-resize !important; user-select: none; }
 .nudge-tip { position: fixed; z-index: 1000; background: #1d2b44; color: #fff; font-size: 12px; padding: 3px 7px; border-radius: 4px; pointer-events: none; white-space: nowrap; }
 @media print { .nudge-bar, .nudge-col, .nudge-tip { display: none !important; } #pages .space:hover { outline: none; } }
+
+/* Look (theme) panel */
+.look-grid { align-items: flex-end; }
+input.look-num { width: 5em; }
+.look-more > summary { cursor: pointer; font-size: 13px; color: #2a4f86; margin: 4px 0; }
+.look-color { display: inline-flex; align-items: center; gap: 4px; }

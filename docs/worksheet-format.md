@@ -114,6 +114,27 @@ fraction, `^` for a power, `*` for ×, or use its on-screen math keyboard. With 
 inside existing math it edits that math; otherwise it inserts new `$…$`. The file still
 stores plain LaTeX.
 
+## Look (themes)
+
+How the pages look is kept apart from what they say. A document may have
+`"theme": { "name": "rounded", "corners": 4 }`: a built-in theme (`classic`, `rounded`,
+`soft`, `serif`, `bold`) plus any setting changed from it: `font` (`sans`, `serif`,
+`rounded`, `friendly`, `mono`), `fontSize` (pt), `ink`, `accent` (titles, headings and
+question labels), `rule` (lines and boxes), `lineWidth` (px), `boxes` (`grid` = joined
+part boxes, `cards` = a separate box per part), `corners` (pt, for cards and fill-in
+boxes) and `shade` (box fill). No `theme` means Classic, the original look.
+
+In the editor the **Look** panel picks the theme and changes its settings (a • marks a
+changed setting). **Save theme…** writes the look to its own `.json` file
+(`{ "mathwiseTheme": 1, … }`) and **Load theme…** applies one to another worksheet. Fonts
+come from the computer that prints: when a font is not installed the next one in its list
+is used. A theme can change how many pages a document takes (cards need a little more
+room), so check the preview after switching.
+
+The renderer only calls `WS.themes.apply(pages, doc.theme)`, which sets CSS variables
+(`--font`, `--font-size`, `--ink`, `--accent`, `--rule`, `--lw`, `--radius`, `--shade`) and
+the `boxes-cards` class; `css/sheet.css` reads them.
+
 ## Adjusting the layout from the preview
 
 In the handout preview, hover a work area and drag the blue bar at its bottom edge to

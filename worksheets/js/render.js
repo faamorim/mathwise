@@ -380,6 +380,7 @@
   // opts.view: 'handout' (default) or 'key' (the separate teacher key).
   function render(container, doc, opts) {
     opts = opts || {};
+    if (WS.themes) WS.themes.apply(container, doc.theme);   // the look; content is below
     var isKey = opts.view === 'key';
     var frags = isKey ? buildKeyFragments(doc) : buildFragments(doc, opts);
     // Images need their size before we can measure; stage them off-screen.
