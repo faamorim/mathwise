@@ -19,8 +19,9 @@
     'sci-notation.js',
     'factoring.js',
     'data/planets.js',
-    'data/rate-scenarios.js',
-    'word-problems.js'
+    'data/stories-rates.js',
+    'data/stories-space.js',
+    'stories.js'
   ];
   var MW = root.Mathwise = root.Mathwise || {};
   MW.generatorFiles = FILES.slice();

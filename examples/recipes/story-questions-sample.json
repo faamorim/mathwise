@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "type": "worksheet",
+  "title": "Story Questions Sample",
+  "header": { "fields": ["name", "date"], "showGrade": false, "custom": [], "repeat": false },
+  "footer": { "pageNumbers": true },
+  "answers": { "handout": "none", "key": "worked" },
+  "paper": "letter",
+  "seed": "stories-1",
+  "blocks": [
+    { "kind": "heading", "text": "Rates" },
+    { "kind": "question", "generator": { "name": "rates.typing-race", "params": {} } },
+    { "kind": "question", "generator": { "name": "rates.swim-laps", "params": {} } },
+    { "kind": "question", "generator": { "name": "rates.heartbeat", "params": { "thinking": false } } },
+    { "kind": "heading", "text": "Our solar system" },
+    { "kind": "question", "generator": { "name": "sci.planet-distance", "params": {} } },
+    { "kind": "question", "generator": { "name": "sci.light-travel", "params": {} } }
+  ]
+}
