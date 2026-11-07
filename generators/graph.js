@@ -166,18 +166,39 @@
   }
 
   // Points of y = f(x) over [a, b], cut into pieces where the curve leaves the plane
-  // (a little past the edge, so lines reach the border) or is undefined.
+  // or is undefined. Where it crosses the top or bottom edge the piece ends exactly on
+  // the edge (found by bisection), so pages need no clipping.
   function curve(f, a, b, g) {
-    var ymin = g.y.min, ymax = g.y.max, pad = (ymax - ymin) * 0.02;
+    var ymin = g.y.min, ymax = g.y.max;
     var n = 400, pieces = [], cur = [];
+    function ok(y) { return isFinite(y) && y >= ymin && y <= ymax; }
+    // The point between x0 (inside) and x1 (outside) where the curve meets an edge.
+    function edge(x0, x1) {
+      for (var k = 0; k < 40; k++) { var m = (x0 + x1) / 2; if (ok(f(m))) x0 = m; else x1 = m; }
+      var y = f(x0);
+      if (isFinite(f(x1))) y = f(x1) > ymax ? ymax : f(x1) < ymin ? ymin : y;
+      return [round(x0), round(y)];
+    }
+    var px = null;
     for (var i = 0; i <= n; i++) {
       var x = a + (b - a) * i / n, y = f(x);
-      var inside = isFinite(y) && y >= ymin - pad && y <= ymax + pad;
-      if (inside) cur.push([round(x), round(y)]);
-      else if (cur.length) { pieces.push(cur); cur = []; }
+      if (ok(y)) {
+        if (!cur.length && px !== null) cur.push(edge(x, px));
+        cur.push([round(x), round(y)]);
+      } else if (cur.length) { cur.push(edge(px, x)); pieces.push(cur); cur = []; }
+      px = x;
     }
     if (cur.length) pieces.push(cur);
     return pieces.filter(function (p) { return p.length > 1; });
+  }
+  // Where a line's label goes: near its right end, a little inside the plane.
+  function labelAt(pts, g) {
+    var dx = (g.x.max - g.x.min) * 0.1, dy = (g.y.max - g.y.min) * 0.1;
+    for (var i = pts.length - 1; i >= 0; i--) {
+      var p = pts[i];
+      if (p[0] <= g.x.max - dx && p[0] >= g.x.min + dx && p[1] <= g.y.max - dy && p[1] >= g.y.min + dy) return p;
+    }
+    return pts[Math.floor(pts.length / 2)];
   }
   function round(v) { return Math.round(v * 1e6) / 1e6; }
 
@@ -195,7 +216,7 @@
         var pieces = curve(f, a, b, g);
         var ends = it.ends || (whole ? ['arrow', 'arrow'] : ['closed', 'closed']);
         pieces.forEach(function (pts, i) {
-          out.lines.push({ points: pts, style: it.style || 'solid', ends: [i === 0 ? ends[0] : 'none', i === pieces.length - 1 ? ends[1] : 'none'], label: i === pieces.length - 1 ? it.label : undefined, key: key });
+          out.lines.push({ points: pts, style: it.style || 'solid', ends: [i === 0 ? ends[0] : 'none', i === pieces.length - 1 ? ends[1] : 'none'], label: i === pieces.length - 1 ? it.label : undefined, labelAt: i === pieces.length - 1 && it.label ? labelAt(pts, g) : undefined, key: key });
         });
         // Dots for open / closed ends of a domain (drawn by the page as dots, not line caps).
         if (!whole) [[it.domain[0], ends[0]], [it.domain[1], ends[1]]].forEach(function (e) {
@@ -203,11 +224,11 @@
         });
       } else if (it.type === 'points') {
         var pts = it.points.map(function (p) { return [p[0], p[1]]; });
-        if (it.join === 'segments' || it.join === 'smooth') out.lines.push({ points: pts, style: it.style || 'solid', smooth: it.join === 'smooth', ends: ['none', 'none'], label: it.label, key: key });
+        if (it.join === 'segments' || it.join === 'smooth') out.lines.push({ points: pts, style: it.style || 'solid', smooth: it.join === 'smooth', ends: ['none', 'none'], label: it.label, labelAt: it.label ? labelAt(pts, g) : undefined, key: key });
         if (it.dots !== 'none') it.points.forEach(function (p) { out.dots.push({ at: [p[0], p[1]], open: it.dots === 'open', label: p[2], key: key }); });
       } else if (it.type === 'segment') {
         var se = it.ends || ['none', 'none'];
-        out.lines.push({ points: [it.from.slice(0, 2), it.to.slice(0, 2)], style: it.style || 'solid', ends: se, label: it.label, key: key });
+        out.lines.push({ points: [it.from.slice(0, 2), it.to.slice(0, 2)], style: it.style || 'solid', ends: se, label: it.label, labelAt: it.label ? [(it.from[0] + it.to[0]) / 2, (it.from[1] + it.to[1]) / 2] : undefined, key: key });
         [[it.from, se[0]], [it.to, se[1]]].forEach(function (e) {
           if (e[1] === 'open' || e[1] === 'closed') out.dots.push({ at: e[0].slice(0, 2), open: e[1] === 'open', key: key });
         });
