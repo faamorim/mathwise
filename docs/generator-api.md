@@ -72,6 +72,10 @@ Returns one item:
 - `steps`: one line each, one rule applied per line (granular, for teaching the method).
 - **Deterministic:** same name + values + seed = same item. No clock, no `Math.random`.
 - `index` / `count`: the part's position in its block (lets a block spread its forms).
+- Optional `methods`: when a question can be worked by more than one method, the item
+  also carries `[{ method, label, steps }]`, one entry per method the settings ask for;
+  `steps` is then all of them, each after a "Label:" line, ready to print. A practice
+  page can offer the student the choice. Pages that do not know it print `steps`.
 - Items may later carry extra optional fields (see *Planned*); pages ignore what they
   do not know.
 

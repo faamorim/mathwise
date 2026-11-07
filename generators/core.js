@@ -184,7 +184,10 @@
     var out = { prompt: r.prompt, workSpace: r.workSpace || gen.workSpace || 1 };
     var output = opts.output || 'steps';
     if (output !== 'none') out.answer = r.answer;
-    if (output === 'steps') out.steps = r.steps || [];
+    if (output === 'steps') {
+      out.steps = r.steps || [];
+      if (r.methods) out.methods = r.methods;
+    }
     return out;
   }
 
@@ -295,7 +298,10 @@
     var out = { prompt: ov.prompt != null ? f(ov.prompt) : r.prompt, workSpace: r.workSpace || gen.workSpace || 1 };
     var output = opts.output || 'steps';
     if (output !== 'none') out.answer = ov.answer != null ? f(ov.answer) : r.answer;
-    if (output === 'steps') out.steps = ov.steps != null ? ov.steps.map(f) : (r.steps || []);
+    if (output === 'steps') {
+      out.steps = ov.steps != null ? ov.steps.map(f) : (r.steps || []);
+      if (r.methods && ov.steps == null) out.methods = r.methods;
+    }
     return out;
   }
 

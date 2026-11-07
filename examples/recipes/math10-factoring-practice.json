@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "type": "worksheet",
+  "title": "Math 10 Factoring Practice",
+  "header": { "fields": ["name", "date"], "showGrade": false, "custom": [], "repeat": false },
+  "footer": { "pageNumbers": true },
+  "answers": { "handout": "final", "key": "worked" },
+  "paper": "letter",
+  "seed": "factoring-practice-1",
+  "blocks": [
+    { "kind": "heading", "text": "Greatest common factor" },
+    { "kind": "question", "generator": { "name": "factoring.gcf", "params": {}, "count": 4 } },
+    { "kind": "heading", "text": "Special products" },
+    { "kind": "question", "generator": { "name": "factoring.difference-of-squares", "params": {}, "count": 3 } },
+    { "kind": "question", "generator": { "name": "factoring.perfect-square", "params": {}, "count": 2 } },
+    { "kind": "heading", "text": "Trinomials" },
+    { "kind": "question", "generator": { "name": "factoring.trinomial", "params": { "leading": ["one"], "methods": ["cross", "sum-product"] }, "count": 4 } },
+    { "kind": "question", "generator": { "name": "factoring.trinomial", "params": { "leading": ["prime", "composite"], "methods": ["cross", "sum-product"] }, "count": 4 } },
+    { "kind": "heading", "text": "Four terms" },
+    { "kind": "question", "generator": { "name": "factoring.four-term", "params": {}, "count": 2 } }
+  ]
+}

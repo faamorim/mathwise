@@ -16,7 +16,8 @@
   var FILES = [
     'core.js',
     'powers.js',
-    'sci-notation.js'
+    'sci-notation.js',
+    'factoring.js'
   ];
   var MW = root.Mathwise = root.Mathwise || {};
   MW.generatorFiles = FILES.slice();
