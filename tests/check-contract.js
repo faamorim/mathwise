@@ -89,6 +89,8 @@ gens.forEach((gen) => {
     check(G.varKinds.includes(d.kind), vw('kind must be one of ' + G.varKinds.join(', ')));
     if (d.kind === 'list') check(d.of && G.varKinds.includes(d.of.kind) && d.of.kind !== 'list', vw('list needs of: { kind } (not a list)'));
     if (d.kind === 'choice') check(Array.isArray(d.values) && d.values.every((o) => o.value !== undefined && isStr(o.label)), vw('values must be [{ value, label }]'));
+    if (d.kind === 'vars') check(vkeys[d.by] && d.templates && Object.keys(d.templates).every((k) => G.isTemplate(G.get(d.templates[k]))),
+      vw('vars needs by (an earlier variable) and templates { value: generator name }'));
     if (d.when) check(Object.keys(d.when).every((k) => Array.isArray(d.when[k])), vw('when must map keys to lists'));
   });
   for (let i = 0; i < 20; i++) {
