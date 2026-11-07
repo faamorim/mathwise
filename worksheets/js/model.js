@@ -95,6 +95,7 @@
     if (KEY_MODES.indexOf(a.key) < 0) a.key = doc.type === 'quiz' ? 'final' : 'none';
     doc.answers = a;
     if (doc.paper !== 'a4') doc.paper = 'letter';
+    if (doc.theme != null && (typeof doc.theme !== 'object' || Array.isArray(doc.theme))) delete doc.theme;
     if (!Array.isArray(doc.blocks)) doc.blocks = [];
     doc.blocks = doc.blocks.filter(function (b) {
       return b && BLOCK_KINDS.indexOf(b.kind) >= 0;

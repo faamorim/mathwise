@@ -23,6 +23,7 @@
     openSteps: new WeakSet(),
     genOpen: new WeakSet(),
     printing: false,
+    lookOpen: false,
     partsOpen: new WeakSet(),
     partsClosed: new WeakSet(),
     picking: false,
@@ -265,6 +266,8 @@
         ], { title: 'A separate document for the teacher, printed with “Print key”' })))
     ));
 
+    if (WS.themes) root.appendChild(buildLook(doc));
+
     if (WS.generated && doc.blocks.some(WS.generated.isGenerated)) {
       var qs = h('input', { type: 'text', class: 'mono seed', placeholder: 'mathwise',
         title: 'Generated questions without their own seed use this seed plus their position' });
@@ -443,6 +446,92 @@
         body.appendChild(h('p', { class: 'muted', text: 'The next block starts on a new page.' }));
         break;
     }
+  }
+
+  // ---------- look (theme) ----------
+
+  // The "Look" panel: pick a theme, change any of its settings, save / load it
+  // as its own file. Stored as doc.theme = { name, ...changed settings }.
+  function buildLook(doc) {
+    var T = WS.themes;
+    var t = doc.theme || { name: 'classic' };
+    var base = T.resolve({ name: t.name });
+    var cur = T.resolve(t);
+    function store(next) {
+      snapshot();
+      var clean = { name: next.name || 'classic' };
+      var b = T.resolve({ name: clean.name });
+      Object.keys(T.CLASSIC).forEach(function (k) { if (next[k] != null && next[k] !== b[k]) clean[k] = next[k]; });
+      if (clean.name === 'classic' && Object.keys(clean).length === 1) delete doc.theme; else doc.theme = clean;
+      changed(true);
+    }
+    var themeSel = h('select');
+    Object.keys(T.THEMES).forEach(function (k) { themeSel.appendChild(h('option', { value: k, text: T.THEMES[k].label })); });
+    themeSel.value = T.THEMES[t.name] ? t.name : 'classic';
+    themeSel.addEventListener('change', function () { store({ name: themeSel.value }); });
+
+    var grid = h('div', { class: 'row look-grid' });
+    T.SETTINGS.forEach(function (d) {
+      var v = cur[d.key];
+      var changedHere = v !== base[d.key];
+      var ctl;
+      function set(val) { var n = JSON.parse(JSON.stringify(t)); n.name = themeSel.value; n[d.key] = val; store(n); }
+      if (d.type === 'choice') {
+        ctl = h('select');
+        d.values.forEach(function (o) { ctl.appendChild(h('option', { value: o[0], text: o[1] })); });
+        ctl.value = v;
+        ctl.addEventListener('change', function () { set(ctl.value); });
+      } else if (d.type === 'number') {
+        ctl = h('input', { type: 'number', min: d.min, max: d.max, step: d.step, class: 'look-num' });
+        ctl.value = v;
+        ctl.addEventListener('change', function () {
+          var n = +ctl.value;
+          if (ctl.value === '' || isNaN(n)) { ctl.value = v; return; }
+          set(Math.max(d.min, Math.min(d.max, n)));
+        });
+      } else {
+        var c = h('input', { type: 'color' });
+        c.value = v || '#ffffff';
+        c.addEventListener('change', function () { set(c.value); });
+        ctl = d.optional
+          ? h('span', { class: 'look-color' }, c, ' ', h('button', { class: 'btn small', text: 'None', title: 'No fill',
+            onclick: function () { set(''); } }))
+          : c;
+        if (d.optional && !v) c.style.opacity = 0.4;
+      }
+      grid.appendChild(field(d.label + (changedHere ? ' •' : ''), ctl));
+    });
+
+    var fileIn = h('input', { type: 'file', accept: '.json,application/json', hidden: true });
+    fileIn.addEventListener('change', function () {
+      var f = fileIn.files[0];
+      if (!f) return;
+      f.text().then(function (text) { store(T.fromFile(JSON.parse(text))); })
+        .catch(function (e) { alert('Could not load the theme: ' + (e.message || e)); });
+    });
+    var custom = Object.keys(t).filter(function (k) { return k !== 'name'; }).length;
+    return h('fieldset', null,
+      h('legend', { text: 'Look' }),
+      h('div', { class: 'row' },
+        field('Theme', themeSel),
+        h('span', { class: 'muted', text: custom ? custom + ' setting(s) changed (•)' : 'Only how the pages look; the questions do not change.' })),
+      h('details', { class: 'look-more', open: state.lookOpen,
+        ontoggle: function (ev) { state.lookOpen = ev.target.open; } },
+        h('summary', { text: 'Fonts, colours, lines, boxes…' }),
+        grid,
+        h('div', { class: 'row' },
+          custom ? h('button', { class: 'btn small', text: 'Reset to ' + T.THEMES[themeSel.value].label,
+            onclick: function () { store({ name: themeSel.value }); } }) : null,
+          h('button', { class: 'btn small', text: 'Save theme…', title: 'Save this look as a .json file to reuse in other worksheets',
+            onclick: function () {
+              var a = document.createElement('a');
+              a.href = URL.createObjectURL(new Blob([JSON.stringify(T.toFile(t), null, 2) + '\n'], { type: 'application/json' }));
+              a.download = 'mathwise-theme-' + (t.name || 'classic') + '.json';
+              document.body.appendChild(a); a.click();
+              setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+            } }),
+          h('button', { class: 'btn small', text: 'Load theme…', onclick: function () { fileIn.value = ''; fileIn.click(); } }),
+          fileIn)));
   }
 
   // ---------- generated questions ----------
