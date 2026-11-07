@@ -22,6 +22,7 @@
     view: 'handout',
     openSteps: new WeakSet(),
     genOpen: new WeakSet(),
+    printing: false,
     partsOpen: new WeakSet(),
     partsClosed: new WeakSet(),
     picking: false,
@@ -173,7 +174,10 @@
     target.style.visibility = 'hidden';
     target.removeAttribute('id');
     pane.appendChild(target);
-    return WS.render.render(target, state.doc, { showAnswers: state.showAnswers, view: state.view }).then(function () {
+    return WS.render.render(target, state.doc, {
+      showAnswers: state.showAnswers, view: state.view,
+      nudge: state.view === 'handout' && !state.printing   // empty work spaces stay draggable in the preview
+    }).then(function () {
       if (token !== renderToken) { target.remove(); return; }
       target.style.position = '';
       target.style.visibility = '';
@@ -1199,10 +1203,12 @@
     var view = what === 'key' ? 'key' : 'handout';
     if (view === 'key' && !hasKey()) return;
     var previous = state.view;
+    state.printing = true;
     setView(view, true).then(function () {
       document.title = stripMarkup(state.doc.title || state.doc.type) + (view === 'key' ? ' – teacher key' : '');
       window.print();
-      if (previous !== view) setView(previous);
+      state.printing = false;
+      if (previous !== view) setView(previous); else schedulePreview(true);
     });
   }
 
@@ -1252,6 +1258,15 @@
       $('pages').style.zoom = $('sel-zoom').value;
     });
     $('preview-pane').addEventListener('click', onPreviewClick);
+    if (WS.nudge) {
+      WS.nudge.attach({
+        pane: $('preview-pane'),
+        getDoc: function () { return state.doc; },
+        enabled: function () { return state.view === 'handout' && !state.printing; },
+        commit: function (fn) { snapshot(); fn(); changed(true); },
+        refresh: function () { schedulePreview(true); }
+      });
+    }
     document.querySelectorAll('.tabs button').forEach(function (b) {
       b.addEventListener('click', function () { showTab(b.dataset.tab); });
     });
