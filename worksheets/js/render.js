@@ -119,7 +119,21 @@
     return out;
   }
 
+  // Compact sheets (work on separate paper): "5^{-1} =" reads as "5^{-1}".
+  // Only a trailing equals sign goes; prompts with fill-in blanks are kept.
+  function noTrailingEquals(src) {
+    src = String(src == null ? '' : src);
+    if (src.indexOf('[[') >= 0) return src;
+    return src.replace(/\s*=\s*\$\$\s*$/, '$$$$').replace(/\s*=\s*\$\s*$/, '$$').replace(/\s*=\s*$/, '');
+  }
+
+  // Rough length of a prompt as printed (for choosing columns on compact sheets).
+  function printedLength(src) {
+    return String(src || '').replace(/\\[a-zA-Z]+/g, 'x').replace(/[{}$^_\\]/g, '').length;
+  }
+
   function questionFragments(q, index, label, doc, opts) {
+    var compact = !!doc.compact;
     var out = [];
     var isQ = q.kind === 'question';
     var parts = WS.model.hasParts(q);
@@ -130,7 +144,7 @@
     head.appendChild(lab);
     var body = el('div', 'q-body');
     var qFill = { answer: !parts && !q.table && q.answer ? q.answer : '' };
-    var prompt = el('div', 'q-prompt', M.html(q.prompt, withFill(opts, qFill)));
+    var prompt = el('div', 'q-prompt', M.html(compact && !parts ? noTrailingEquals(q.prompt) : q.prompt, withFill(opts, qFill)));
     if (doc.showMarks && isQ) {
       var mk = WS.model.questionMarks(q, doc);
       prompt.insertAdjacentHTML('beforeend',
@@ -150,6 +164,12 @@
     if (parts) {
       var cols = Math.min(4, Math.max(1, +q.columns || 1));
       var boxed = q.boxed !== false;
+      if (compact) {
+        // No work space: no boxes, and short parts sit four to a row.
+        boxed = false;
+        var longest = Math.max.apply(null, q.parts.map(function (pp) { return printedLength(noTrailingEquals(pp.prompt)); }));
+        cols = Math.max(cols, longest <= 12 ? 4 : longest <= 18 ? 3 : cols);
+      }
       var partSpace = q.space != null ? q.space : (boxed ? 2 : 1);
       for (var i = 0; i < q.parts.length; i += cols) {
         var row = el('div', 'parts-row cols-' + cols + (boxed ? ' boxed' : ' plain') + (i > 0 ? ' cont' : ''));
@@ -161,7 +181,7 @@
             var line = el('div', 'p-line');
             line.appendChild(el('span', 'p-label', M.escapeHtml(WS.model.partLabel(j, p))));
             var pFill = { answer: p.answer || '' };
-            line.appendChild(el('span', 'p-prompt', M.inline(p.prompt, withFill(opts, pFill))));
+            line.appendChild(el('span', 'p-prompt', M.inline(compact ? noTrailingEquals(p.prompt) : p.prompt, withFill(opts, pFill))));
             cell.appendChild(line);
             // An open-ended (thinking) part gets at least 3 lines unless set by hand.
             var ps = doc.compact ? 0 : p.space != null ? p.space : (p.thinking ? Math.max(partSpace, 3) : partSpace);
@@ -393,6 +413,7 @@
   function render(container, doc, opts) {
     opts = opts || {};
     if (WS.themes) WS.themes.apply(container, doc.theme);   // the look; content is below
+    container.classList.toggle('compact', !!doc.compact && opts.view !== 'key');
     var isKey = opts.view === 'key';
     var frags = isKey ? buildKeyFragments(doc) : buildFragments(doc, opts);
     // Images need their size before we can measure; stage them off-screen.

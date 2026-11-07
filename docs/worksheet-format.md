@@ -126,7 +126,9 @@ stores plain LaTeX.
   to solve it) and **My notes**.
 - `"compact": true` on the document leaves out all work space under questions and parts,
   for a short sheet where students work on separate paper (fill-in blanks and notes boxes
-  stay). In the editor: Document › *Compact*.
+  stay). The handout also drops a trailing `=` from prompts, leaves out part boxes, puts
+  short parts three or four to a row and tightens the gaps; the teacher key is unchanged.
+  In the editor: Document › *Compact*.
 
 ## Look (themes)
 

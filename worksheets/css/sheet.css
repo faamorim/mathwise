@@ -212,3 +212,7 @@
 /* Worked key: tall math (fractions) gets its own line height so stacked steps never overlap. */
 .wk-steps .katex, .wk-prompt .katex, .wk-ans .katex { display: inline-block; margin: 0.2em 0; }
 .wk-steps p { line-height: 1.35; }
+/* Compact sheets (doc.compact): students work on separate paper. */
+.pages.compact .frag.block-start { margin-top: 0.09in; }
+.pages.compact .q-prompt p:last-child { margin-bottom: 0.12em; }
+.pages.compact .parts-row.plain .part { padding: 0.08em 0.6em 0.08em 0.2em; }
