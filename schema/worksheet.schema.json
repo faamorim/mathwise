@@ -48,7 +48,8 @@
       "description": "Where answers are printed.",
       "properties": {
         "handout": { "enum": ["none", "final"], "default": "none", "description": "final: an answers page at the end of the student handout, counted in the page numbers." },
-        "key": { "enum": ["none", "final", "worked"], "description": "A separate teacher key, printed as its own document. final: answers only. worked: each question with its worked solution and answer. Default: final for quizzes, none for worksheets." }
+        "key": { "enum": ["none", "final", "worked", "both"], "description": "A separate teacher key, printed as its own document. final: answers only. worked: each question with its worked solution and answer. both: the answers page, then the worked solutions. Default: final for quizzes, none for worksheets." },
+        "keyTitle": { "enum": ["teacher", "solutions"], "default": "teacher", "description": "Title of the key: Teacher key, or Solutions when it is handed to students." }
       }
     },
     "paper": { "enum": ["letter", "a4"], "default": "letter" },

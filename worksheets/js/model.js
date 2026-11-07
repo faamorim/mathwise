@@ -8,7 +8,7 @@
   var SCHEMA_VERSION = 1;
   var STANDARD_FIELDS = ['name', 'date', 'period', 'block'];
   var HANDOUT_ANSWERS = ['none', 'final'];
-  var KEY_MODES = ['none', 'final', 'worked'];
+  var KEY_MODES = ['none', 'final', 'worked', 'both'];
   var BLOCK_KINDS = ['heading', 'text', 'example', 'question', 'table', 'image', 'notes', 'pageBreak'];
 
   function letter(i) {
@@ -84,7 +84,8 @@
     if (typeof f.pageNumbers !== 'boolean') f.pageNumbers = true;
     if (!isNum(doc.defaultMarks)) doc.defaultMarks = 1;
     // answers.handout: 'none' | 'final'  (an answers page inside the handout)
-    // answers.key:     'none' | 'final' | 'worked'  (separate teacher key)
+    // answers.key:     'none' | 'final' | 'worked' | 'both'  (separate key; both = answers page, then worked)
+    // answers.keyTitle: 'teacher' (default, "Teacher key") | 'solutions' ("Solutions", to hand to students)
     var a = doc.answers && typeof doc.answers === 'object' ? doc.answers : {};
     if (!a.handout && !a.key && doc.answerKey != null) {
       // Older drafts used a single answerKey setting.
@@ -94,6 +95,7 @@
     delete doc.answerKey;
     if (HANDOUT_ANSWERS.indexOf(a.handout) < 0) a.handout = 'none';
     if (KEY_MODES.indexOf(a.key) < 0) a.key = doc.type === 'quiz' ? 'final' : 'none';
+    if (a.keyTitle !== 'solutions') delete a.keyTitle;
     doc.answers = a;
     if (doc.paper !== 'a4') doc.paper = 'letter';
     if (doc.theme != null && (typeof doc.theme !== 'object' || Array.isArray(doc.theme))) delete doc.theme;

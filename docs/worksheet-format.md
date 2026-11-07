@@ -47,7 +47,8 @@ this page explains it with examples. Full examples live in [`examples/`](../exam
 | `defaultMarks` | Marks for any question / part that doesn't set its own. |
 | `showMarks` | Print `[2 marks]` next to each question. |
 | `answers.handout` | `"final"` adds an answers page at the end of the handout, counted in the page numbers (good for practice worksheets). Default `"none"`. |
-| `answers.key` | A **separate teacher key**, printed as its own document with *Print key*: `"final"` (answers only, default for quizzes), `"worked"` (each question with its worked solution and answer) or `"none"` (default for worksheets). |
+| `answers.key` | A **separate teacher key**, printed as its own document with *Print key*: `"final"` (answers only, default for quizzes), `"worked"` (each question with its worked solution and answer), `"both"` (the answers page for a quick check, then the worked solutions for students who are stuck) or `"none"` (default for worksheets). |
+| `answers.keyTitle` | `"solutions"` titles the key *Solutions* instead of *Teacher key*, for a key you hand to students. |
 | `paper` | `"letter"` or `"a4"`. |
 
 ## Blocks

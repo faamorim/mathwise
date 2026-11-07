@@ -331,10 +331,18 @@
     return out;
   }
 
+  function keyName(doc) { return doc.answers.keyTitle === 'solutions' ? 'Solutions' : 'Teacher key'; }
+
+  // The separate key: final answers, worked solutions, or both (a quick answers page
+  // to check with, then the worked solutions for when a student is stuck).
   function buildKeyFragments(doc) {
-    var worked = doc.answers.key === 'worked';
-    var out = [frag(el('div', 'ws-heading size-m', worked ? 'Teacher key: worked solutions' : 'Teacher key: answers'), null, true)];
-    return out.concat(worked ? workedFragments(doc) : finalAnswerFragments(doc));
+    var mode = doc.answers.key;
+    var name = keyName(doc);
+    function heading(t) { return frag(el('div', 'ws-heading size-m', name + ': ' + t), null, true); }
+    if (mode === 'worked') return [heading('worked solutions')].concat(workedFragments(doc));
+    var out = [heading('answers')].concat(finalAnswerFragments(doc));
+    if (mode === 'both') out = out.concat([{ pageBreak: true }, heading('worked solutions')], workedFragments(doc));
+    return out;
   }
 
   // ---------- pagination ----------
@@ -387,7 +395,7 @@
       });
     }
     keyPages.forEach(function (p, i) {
-      p.querySelector('.page-footer').textContent = 'Teacher key' +
+      p.querySelector('.page-footer').textContent = keyName(doc) +
         (keyPages.length > 1 ? ' · ' + (i + 1) + ' of ' + keyPages.length : '');
     });
     pages.forEach(function (p) {

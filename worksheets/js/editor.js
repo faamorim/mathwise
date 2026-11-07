@@ -265,8 +265,13 @@
         field('Teacher key (separate)', selectInput(doc.answers, 'key', [
           ['none', 'None'],
           ['final', 'Final answers'],
-          ['worked', 'Worked solutions']
-        ], { title: 'A separate document for the teacher, printed with “Print key”' })))
+          ['worked', 'Worked solutions'],
+          ['both', 'Answers page, then worked solutions']
+        ], { title: 'A separate document, printed with “Print key”. Both: a quick answers page to check with, then the worked solutions for when you are stuck.' })),
+        doc.answers.key !== 'none' ? field('Key title', selectInput(doc.answers, 'keyTitle', [
+          ['teacher', 'Teacher key'],
+          ['solutions', 'Solutions (for students)']
+        ], { def: 'teacher', title: 'Call it “Solutions” when you hand the key to students' })) : null)
     ));
 
     if (WS.themes) root.appendChild(buildLook(doc));
