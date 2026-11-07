@@ -91,6 +91,32 @@ for (const gen of G.list()) {
     }
   }
 }
+// Written questions on real data: answers match the data and the follow-ups.
+{
+  const D = MW.data;
+  const val = (d) => Number(MW.sci.mantissa(d.digits)) * Math.pow(10, d.exponent);
+  const nums = (t) => (t.match(/-?[\d\\,.]+/g) || []).map((x) => Number(x.replace(/\\,/g, ''))).filter((x) => !isNaN(x));
+  for (let seed = 0; seed < 200; seed++) {
+    const r = G.pick('rates.per-hour', { thinking: 'all' }, 'w' + seed);
+    const it = G.render('rates.per-hour', r);
+    assert.ok(it.answer.startsWith('$' + MW.math.num(60 / r.t * r.n) + '$'), 'rates answer ' + JSON.stringify(r));
+    assert.ok(!/%\w+%/.test(it.prompt + it.answer), 'rates placeholder left: ' + it.prompt);
+    const q = G.pick('sci.planet-ratio', {}, 'w' + seed);
+    const want = val(D.planets.items.find((p) => p.name === q.far).distance) / val(D.planets.items.find((p) => p.name === q.near).distance);
+    const got = nums(G.render('sci.planet-ratio', q).answer.split('\n')[0])[0];
+    assert.ok(Math.abs(got - want) / want < 0.05, 'ratio ' + JSON.stringify(q) + ' ' + got + ' vs ' + want);
+    const l = G.pick('sci.light-time', {}, 'w' + seed);
+    const mins = val(D.planets.items.find((p) => p.name === l.planet).distance) / 3e5 / 60;
+    const ans = G.render('sci.light-time', l).answer;
+    const gotMin = nums(ans.split('or about')[1])[0];
+    assert.ok(Math.abs(gotMin - mins) / mins < 0.05, 'light ' + l.planet + ' ' + gotMin + ' vs ' + mins);
+  }
+  // Turning follow-ups on or off never changes the numbers.
+  const on = G.fillBlock({ kind: 'question', generator: { name: 'rates.per-hour', params: { thinking: 'all' }, seed: 'f', count: 5 } });
+  const off = G.fillBlock({ kind: 'question', generator: { name: 'rates.per-hour', params: { thinking: 'none' }, seed: 'f', count: 5 } });
+  on.parts.forEach((p, i) => assert.ok(p.prompt.startsWith(off.parts[i].prompt), 'follow-ups changed the numbers'));
+}
+
 // Friendly messages for vars that do not fit.
 assert.ok(G.checkVars('powers.monomials', { letter: 'x', coefficients: [6, 4], exponents: [2, 1], ops: ['divide'] })[0].includes('whole'));
 assert.ok(G.checkVars('sci.to-scientific', { digits: '370', exponent: 3 })[0].includes('nonzero digit'));
