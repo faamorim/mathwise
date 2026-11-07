@@ -12,8 +12,12 @@
  *     whole: false,                         // true: one generated item IS the question (no parts)
  *     params: [ ...parameter descriptions, see below... ],
  *     validate: function (values) { return [friendly error strings]; },   // optional
- *     generate: function (values, rng, ctx) { return { prompt, answer, steps } }
+ *     variables: [ ...the vars pick() returns, see VAR_KINDS... ],
+ *     pick: function (values, rng, ctx) { return vars },       // every random choice
+ *     render: function (vars) { return { prompt, answer, steps, slots } },   // no randomness
+ *     checkVars: function (vars) { return [friendly error strings]; }      // optional
  *   }
+ * register() makes generate(values, rng, ctx) = render(pick(values, rng, ctx)).
  *
  * Parameters show real values (never "easy/hard"):
  *   { key, label, type: 'number', min, max, default }
@@ -95,6 +99,11 @@
   // ---------- registry ----------
 
   function register(gen) {
+    if (gen && !gen.generate && typeof gen.pick === 'function' && typeof gen.render === 'function') {
+      // A template generator: generate is always render(pick(...)), so an unlinked
+      // question re-renders exactly like the generated one.
+      gen.generate = function (v, rng, ctx) { return gen.render(gen.pick(v, rng, ctx)); };
+    }
     if (!gen || !gen.name || typeof gen.generate !== 'function') throw new Error('Bad generator');
     if (!registry[gen.name]) order.push(gen.name);
     registry[gen.name] = gen;
@@ -179,6 +188,126 @@
     return out;
   }
 
+  // ---------- question templates ----------
+  //
+  // A template generator splits generate() in two:
+  //   pick(values, rng, ctx) -> vars     every random choice, as plain JSON values
+  //   render(vars)           -> { prompt, answer, steps, slots? }   no randomness
+  // and describes its vars in `variables` (see VAR_KINDS) so a page can show
+  // them as fields. An unlinked question keeps { name, vars, overrides } and
+  // re-renders when the teacher edits a value; text typed over by hand
+  // (overrides) wins, and may use %name% placeholders for vars and slots.
+
+  var VAR_KINDS = {
+    int: function (x, d) {
+      if (typeof x !== 'number' || !isFinite(x) || Math.floor(x) !== x) return 'must be a whole number';
+      if (d.min != null && x < d.min) return 'must be at least ' + d.min;
+      if (d.max != null && x > d.max) return 'must be at most ' + d.max;
+      if (d.nonzero && x === 0) return 'cannot be 0';
+    },
+    letter: function (x) { if (typeof x !== 'string' || !/^[a-zA-Z]$/.test(x)) return 'must be one letter'; },
+    'int-or-letter': function (x, d) {
+      if (typeof x === 'string') return VAR_KINDS.letter(x, d);
+      return VAR_KINDS.int(x, d);
+    },
+    digits: function (x) {
+      if (typeof x !== 'string' || !/^[1-9](\d*[1-9])?$/.test(x)) return 'must be digits that start and end with a nonzero digit, like 37 or 4061';
+    },
+    choice: function (x, d) {
+      if (!d.values.some(function (o) { return o.value === x; })) return 'choose one of ' + d.values.map(function (o) { return o.label; }).join(', ');
+    },
+    toggle: function (x) { if (typeof x !== 'boolean') return 'must be on or off'; },
+    list: function (x, d) {
+      if (!Array.isArray(x)) return 'must be a list';
+      if (d.minLength != null && x.length < d.minLength) return 'needs at least ' + d.minLength + ' items';
+      if (d.maxLength != null && x.length > d.maxLength) return 'takes at most ' + d.maxLength + ' items';
+      var item = d.of || { kind: 'int' };
+      for (var i = 0; i < x.length; i++) {
+        var e = VAR_KINDS[item.kind] && VAR_KINDS[item.kind](x[i], item);
+        if (e) return 'item ' + (i + 1) + ' ' + e;
+      }
+    }
+  };
+
+  function isTemplate(gen) { return typeof gen.pick === 'function' && typeof gen.render === 'function'; }
+
+  // Is variable d used for these vars? (`when: { form: ['basic', 'ten'] }`)
+  function varApplies(d, vars) {
+    if (!d.when) return true;
+    return Object.keys(d.when).every(function (k) { return d.when[k].indexOf(vars[k]) >= 0; });
+  }
+
+  // Friendly messages for vars a teacher typed (empty when render can use them).
+  function checkVars(gen, vars) {
+    if (typeof gen === 'string') gen = get(gen);
+    if (!isTemplate(gen)) return [gen.title + ' is not a template.'];
+    vars = vars || {};
+    var errs = [];
+    (gen.variables || []).forEach(function (d) {
+      if (!varApplies(d, vars)) return;
+      var e = vars[d.key] === undefined ? 'is missing' : VAR_KINDS[d.kind] && VAR_KINDS[d.kind](vars[d.key], d);
+      if (e) errs.push(d.label + ' ' + e + '.');
+    });
+    if (!errs.length && gen.checkVars) errs = errs.concat(gen.checkVars(vars) || []);
+    return errs;
+  }
+
+  // The random part of generate: the vars a seed picks (same rng use as generate).
+  function pick(name, values, seed, opts) {
+    var gen = get(name);
+    if (!isTemplate(gen)) throw new Error(gen.title + ' is not a template.');
+    opts = opts || {};
+    var v = withDefaults(gen, values);
+    var errs = validate(gen, v);
+    if (errs.length) throw new Error(gen.title + ': ' + errs.join(' '));
+    var ctx = { index: opts.index, count: opts.count, spread: function (key, rng) { return spread(gen, key, v[key], rng, ctx); } };
+    return gen.pick(v, makeRng(seed), ctx);
+  }
+
+  // %name% -> the slot or var of that name (scalars only); %% is a literal %.
+  // Unknown names are left as they are.
+  function fillText(text, vars, slots) {
+    return String(text).replace(/%%|%([A-Za-z_][A-Za-z0-9_]*)%/g, function (m, k) {
+      if (m === '%%') return '%';
+      if (slots && slots[k] != null) return String(slots[k]);
+      var x = vars[k];
+      return x != null && typeof x !== 'object' ? String(x) : m;
+    });
+  }
+
+  /**
+   * Render a template from its vars (no seed). opts.output as in generate;
+   * opts.overrides: { prompt?, answer?, steps?: [..] } typed by hand, used
+   * instead of the rendered text (with %name% placeholders filled).
+   * Throws with friendly messages when the vars do not fit (see checkVars);
+   * with opts.noThrow it returns { errors: [messages] } instead.
+   */
+  function render(name, vars, opts) {
+    var gen = get(name);
+    opts = opts || {};
+    var errs = checkVars(gen, vars);
+    if (errs.length && opts.noThrow) return { errors: errs };
+    if (errs.length) throw new Error(gen.title + ': ' + errs.join(' '));
+    var r = gen.render(JSON.parse(JSON.stringify(vars)));
+    var ov = opts.overrides || {};
+    var slots = r.slots || {};
+    function f(t) { return fillText(t, vars, slots); }
+    var out = { prompt: ov.prompt != null ? f(ov.prompt) : r.prompt, workSpace: r.workSpace || gen.workSpace || 1 };
+    var output = opts.output || 'steps';
+    if (output !== 'none') out.answer = ov.answer != null ? f(ov.answer) : r.answer;
+    if (output === 'steps') out.steps = ov.steps != null ? ov.steps.map(f) : (r.steps || []);
+    return out;
+  }
+
+  // Names a page may offer as %name% placeholders for these vars.
+  function placeholders(name, vars) {
+    var gen = get(name);
+    var r = gen.render(JSON.parse(JSON.stringify(vars)));
+    var names = Object.keys(vars).filter(function (k) { return vars[k] != null && typeof vars[k] !== 'object'; });
+    Object.keys(r.slots || {}).forEach(function (k) { if (names.indexOf(k) < 0) names.push(k); });
+    return names;
+  }
+
   /**
    * THE seed rule (the only copy of it): a block's own generator.seed wins;
    * without one, the block uses the document seed plus its 1-based position,
@@ -201,6 +330,7 @@
    */
   function fillBlock(block, opts) {
     opts = opts || {};
+    if (!block.generator && block.template) return fillTemplateBlock(block, opts);
     var g = JSON.parse(JSON.stringify(block.generator));
     g.seed = blockSeed(block.generator, opts.docSeed, opts.blockNumber);
     var gen = get(g.name);
@@ -232,8 +362,82 @@
         attempt++;
       } while (seen[r.prompt] && attempt < 50);
       seen[r.prompt] = true;
-      out.parts.push(toItem(r));
+      out.parts.push(keepExtras(toItem(r), block.parts && block.parts[i]));
     }
+    return out;
+  }
+
+  // Part fields the library does not own (marks, space, label, …) survive a re-render.
+  var OWNED = { prompt: 1, answer: 1, solution: 1, template: 1 };
+  function keepExtras(item, old) {
+    if (!old) return item;
+    Object.keys(old).forEach(function (k) { if (!OWNED[k] && item[k] === undefined) item[k] = old[k]; });
+    return item;
+  }
+
+  // Pick, re-rolling a part whose prompt repeats an earlier part (same rule as fillBlock).
+  function blockVars(g, seed) {
+    var gen = get(g.name);
+    if (gen.whole) return [pick(g.name, g.params, partSeed(seed, 0))];
+    var count = g.count || 4, seen = {}, out = [];
+    for (var i = 0; i < count; i++) {
+      var vars, attempt = 0, p;
+      do {
+        vars = pick(g.name, g.params, partSeed(seed, i, attempt), { index: i, count: count });
+        p = gen.render(JSON.parse(JSON.stringify(vars))).prompt;
+        attempt++;
+      } while (seen[p] && attempt < 50);
+      seen[p] = true;
+      out.push(vars);
+    }
+    return out;
+  }
+
+  /**
+   * Unlink a generator block: the same questions, now from vars instead of a seed.
+   *   { kind: 'question', template: { name, params },
+   *     parts: [ { prompt, answer, solution, template: { vars, overrides? } }, ... ] }
+   * A whole-question template keeps vars (and overrides) on block.template itself.
+   * params are the settings at unlink time, so a page can pick() one more part
+   * like these. The filled text stays on the block, so a page that does not know
+   * templates still shows it as a hand-made question. opts as in fillBlock.
+   */
+  function unlink(block, opts) {
+    opts = opts || {};
+    var gen = get(block.generator.name);
+    if (!isTemplate(gen)) throw new Error(gen.title + ' is not a template.');
+    var seed = blockSeed(block.generator, opts.docSeed, opts.blockNumber);
+    var filled = fillBlock(block, opts);
+    var vars = blockVars(block.generator, seed);
+    delete filled.generator;
+    filled.template = { name: gen.name, params: withDefaults(gen, block.generator.params) };
+    if (gen.whole) filled.template.vars = vars[0];
+    else filled.parts.forEach(function (p, i) { p.template = { vars: vars[i] }; });
+    return filled;
+  }
+
+  // Fill a template block: re-render every part that has template vars (a part
+  // without them is hand-made and kept as it is); other part fields are kept.
+  function fillTemplateBlock(block, opts) {
+    var t = block.template;
+    var gen = get(t.name);
+    var steps = opts.output !== 'answer';
+    var out = JSON.parse(JSON.stringify(block));
+    if (out.prompt == null) out.prompt = gen.prompt || 'Answer';
+    if (out.columns == null && gen.columns) out.columns = gen.columns;
+    if (out.space == null) out.space = gen.workSpace || 1;
+    function apply(target, tv) {
+      var r = render(t.name, tv.vars, { overrides: tv.overrides });
+      target.prompt = r.prompt;
+      target.answer = r.answer;
+      if (steps && r.steps.length) target.solution = r.steps.join('\n'); else delete target.solution;
+    }
+    if (gen.whole) {
+      apply(out, t);
+      delete out.parts;
+      return out;
+    }
+    (out.parts || []).forEach(function (p) { if (p.template) apply(p, p.template); });
     return out;
   }
 
@@ -242,7 +446,7 @@
   function fillDocument(doc, opts) {
     var out = JSON.parse(JSON.stringify(doc));
     out.blocks = out.blocks.map(function (b, i) {
-      if (!b.generator) return b;
+      if (!b.generator && !b.template) return b;
       var o = { docSeed: doc.seed, blockNumber: i + 1 };
       if (opts && opts.output) o.output = opts.output;
       return fillBlock(b, o);
@@ -318,6 +522,15 @@
     fillBlock: fillBlock,
     fillDocument: fillDocument,
     blockSeed: blockSeed,
+    // Question templates (docs/generator-api.md, section 6)
+    varKinds: Object.keys(VAR_KINDS),
+    isTemplate: isTemplate,
+    varApplies: varApplies,
+    checkVars: checkVars,
+    pick: pick,
+    render: render,
+    placeholders: placeholders,
+    unlink: unlink,
     makeRng: makeRng,
     partSeed: partSeed
   };

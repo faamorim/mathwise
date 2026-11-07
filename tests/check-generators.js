@@ -49,6 +49,37 @@ for (const gen of G.list()) {
   }
 }
 
+// Teacher-typed vars: nudge each whole-number var of picked vars (as a teacher
+// editing an unlinked question would); whenever checkVars accepts the result,
+// render must still give valid KaTeX and numerically right steps and answer.
+let edited = 0;
+for (const gen of G.list()) {
+  for (let seed = 0; seed < 60; seed++) {
+    const base = G.pick(gen.name, {}, 'edit' + seed, { index: seed % 6, count: 6 });
+    for (const k of Object.keys(base)) {
+      const vals = Array.isArray(base[k]) ? base[k].map((_, i) => i) : [null];
+      for (const i of vals) {
+        for (const d of [-3, -1, 1, 2, 5]) {
+          const vars = JSON.parse(JSON.stringify(base));
+          if (i === null) { if (typeof vars[k] !== 'number') continue; vars[k] += d; }
+          else { if (typeof vars[k][i] !== 'number') continue; vars[k][i] += d; }
+          if (G.checkVars(gen, vars).length) continue;
+          const r = G.render(gen.name, vars);
+          const it = { prompt: r.prompt, answer: r.answer, solution: r.steps.join('\n') };
+          ['prompt', 'answer', 'solution'].forEach((f) => katexOk(it[f], gen.name + ' edited ' + f));
+          edited++;
+          const c = checkItem(it);
+          if (c && c.length) fails.push(gen.name + ' edited vars ' + JSON.stringify(vars) + ': ' + it.prompt + '\n    ' + c.join('\n    '));
+        }
+      }
+    }
+  }
+}
+// Friendly messages for vars that do not fit.
+assert.ok(G.checkVars('powers.monomials', { letter: 'x', coefficients: [6, 4], exponents: [2, 1], ops: ['divide'] })[0].includes('whole'));
+assert.ok(G.checkVars('sci.to-scientific', { digits: '370', exponent: 3 })[0].includes('nonzero digit'));
+assert.ok(G.checkVars('powers.positive-exponents', { form: 'negative', base: 2, exponent: 4 })[0].includes('odd'));
+
 // Friendly validation errors.
 const pq = G.get('powers.product-quotient');
 assert.ok(G.validate(pq, { maxExponent: 99 })[0].includes('from 2 to 30'));
@@ -70,7 +101,7 @@ for (const f of fs.readdirSync(path.join(__dirname, '..', 'examples')).filter((f
 }
 
 if (fails.length) { console.error(fails.slice(0, 30).join('\n')); console.error(fails.length + ' problems'); process.exit(1); }
-console.log('Generators OK: ' + items + ' items, ' + checked + ' checked numerically.');
+console.log('Generators OK: ' + items + ' items, ' + checked + ' checked numerically; ' + edited + ' teacher-edited items.');
 
 // The short recipe rebuilds exactly the committed generated quiz.
 {

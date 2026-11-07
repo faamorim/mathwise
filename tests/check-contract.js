@@ -11,7 +11,8 @@ const isStr = (x) => typeof x === 'string' && x.length > 0;
 
 // The public API.
 check(G.apiVersion === 1, 'apiVersion must be 1');
-['list', 'get', 'defaults', 'validate', 'generate', 'fillBlock', 'fillDocument', 'blockSeed'].forEach((f) =>
+['list', 'get', 'defaults', 'validate', 'generate', 'fillBlock', 'fillDocument', 'blockSeed',
+  'isTemplate', 'varApplies', 'checkVars', 'pick', 'render', 'placeholders', 'unlink'].forEach((f) =>
   check(typeof G[f] === 'function', 'missing API function ' + f));
 
 // The seed rule.
@@ -75,6 +76,57 @@ gens.forEach((gen) => {
   if (gen.whole) check(isStr(f.prompt) && isStr(f.answer) && !f.parts, where('whole block needs prompt + answer, no parts'));
   else check(Array.isArray(f.parts) && f.parts.length === 3 && f.parts.every((p) => isStr(p.prompt) && isStr(p.answer)),
     where('block must have count parts with prompt and answer'));
+
+  // Question template: variables + pick + render, with generate = render(pick()).
+  check(G.isTemplate(gen), where('must be a template (variables, pick, render)'));
+  if (!G.isTemplate(gen)) return;
+  const vkeys = {};
+  check(Array.isArray(gen.variables) && gen.variables.length > 0, where('variables missing'));
+  (gen.variables || []).forEach((d) => {
+    const vw = (m) => where('variable ' + d.key + ': ' + m);
+    check(isStr(d.key) && !vkeys[d.key], vw('key missing or repeated')); vkeys[d.key] = true;
+    check(isStr(d.label), vw('label missing'));
+    check(G.varKinds.includes(d.kind), vw('kind must be one of ' + G.varKinds.join(', ')));
+    if (d.kind === 'list') check(d.of && G.varKinds.includes(d.of.kind) && d.of.kind !== 'list', vw('list needs of: { kind } (not a list)'));
+    if (d.kind === 'choice') check(Array.isArray(d.values) && d.values.every((o) => o.value !== undefined && isStr(o.label)), vw('values must be [{ value, label }]'));
+    if (d.when) check(Object.keys(d.when).every((k) => Array.isArray(d.when[k])), vw('when must map keys to lists'));
+  });
+  for (let i = 0; i < 20; i++) {
+    const seed = 'contract' + i;
+    const vars = G.pick(n, {}, seed, { index: i % 3, count: 3 });
+    const json = JSON.parse(JSON.stringify(vars));
+    check(JSON.stringify(json) === JSON.stringify(vars), where('vars must be plain JSON'));
+    check(Object.keys(vars).every((k) => vkeys[k]), where('pick returned a var not in variables: ' + Object.keys(vars).join(', ')));
+    const errs = G.checkVars(gen, json);
+    check(errs.length === 0, where('picked vars fail checkVars: ' + errs.join(' ')));
+    if (errs.length) continue;
+    const r = G.render(n, json);
+    const g = G.generate(n, {}, seed, { index: i % 3, count: 3 });
+    check(JSON.stringify(r) === JSON.stringify(g), where('render(pick()) differs from generate()'));
+  }
+  // Unlinked block shows the same questions, keeps part extras; overrides with placeholders win.
+  const stored2 = { kind: 'question', generator: { name: n, params: {}, count: 3, seed: 'u' } };
+  const filled = G.fillBlock(stored2);
+  if (filled.parts) filled.parts[1].marks = 2;
+  const un = G.unlink(Object.assign({}, stored2, { parts: filled.parts }));
+  check(!un.generator && un.template && un.template.name === n && typeof un.template.params === 'object', where('unlink must give template { name, params }'));
+  if (gen.whole) check(un.template.vars && !un.parts, where('whole unlink keeps vars on block.template'));
+  else check(un.parts.every((p) => p.template && p.template.vars) && un.parts[1].marks === 2, where('unlink must put template { vars } on each part and keep marks'));
+  const refilled = G.fillBlock(un);
+  const strip = (b) => JSON.stringify((b.parts || [b]).map((p) => [p.prompt, p.answer, p.solution]));
+  check(strip(refilled) === strip(filled), where('unlinked block differs from the generated one'));
+  const tv = gen.whole ? un.template : un.parts[0].template;
+  const key = Object.keys(tv.vars).find((k) => typeof tv.vars[k] !== 'object');
+  tv.overrides = { answer: 'is %' + key + '% (100%%)' };
+  const ov = G.fillBlock(un);
+  check((ov.parts ? ov.parts[0] : ov).answer === 'is ' + tv.vars[key] + ' (100%)', where('override placeholders not filled'));
+  check(G.placeholders(n, tv.vars).includes(key), where('placeholders() misses ' + key));
+  if (!gen.whole) {
+    const extra = G.pick(n, un.template.params, 'more');
+    check(G.checkVars(gen, extra).length === 0, where('pick with template.params fails'));
+  }
+  const bad = G.render(n, {}, { noThrow: true });
+  check(Array.isArray(bad.errors) && bad.errors.length > 0, where('render noThrow must return errors'));
 });
 
 if (fail.length) {
