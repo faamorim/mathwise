@@ -17,7 +17,11 @@
     'core.js',
     'powers.js',
     'sci-notation.js',
-    'factoring.js'
+    'factoring.js',
+    'data/planets.js',
+    'data/stories-rates.js',
+    'data/stories-space.js',
+    'stories.js'
   ];
   var MW = root.Mathwise = root.Mathwise || {};
   MW.generatorFiles = FILES.slice();

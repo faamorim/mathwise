@@ -167,6 +167,34 @@
     return rng.pick(ordered);
   }
 
+  // Parts of a whole question (a story with a), b), c) …), cut to the output level.
+  function partsAt(parts, output) {
+    return parts.map(function (p) {
+      var q = { prompt: p.prompt };
+      if (p.thinking) q.thinking = true;
+      if (output !== 'none') q.answer = p.answer;
+      if (output === 'steps') q.steps = p.steps || [];
+      return q;
+    });
+  }
+  // Put a whole item into a block: its prompt, and either its parts or its answer.
+  function wholeInto(out, w, steps) {
+    out.prompt = w.prompt;   // a whole-question generator writes the full prompt
+    delete out.answer; delete out.solution; delete out.parts;
+    if (w.parts) {
+      out.parts = w.parts.map(function (p) {
+        var it = { prompt: p.prompt, answer: p.answer };
+        if (steps && p.steps && p.steps.length) it.solution = p.steps.join('\n');
+        if (p.thinking) it.thinking = true;
+        return it;
+      });
+      return out;
+    }
+    out.answer = w.answer;
+    if (steps && w.steps && w.steps.length) out.solution = w.steps.join('\n');
+    return out;
+  }
+
   /**
    * Run one generator once.
    * opts.output: 'steps' (default) | 'answer' | 'none'
@@ -188,6 +216,8 @@
       out.steps = r.steps || [];
       if (r.methods) out.methods = r.methods;
     }
+    if (r.followUps && output !== 'none') out.followUps = r.followUps;
+    if (r.parts) out.parts = partsAt(r.parts, output);
     return out;
   }
 
@@ -310,6 +340,8 @@
       out.steps = ov.steps != null ? ov.steps.map(f) : (r.steps || []);
       if (r.methods && ov.steps == null) out.methods = r.methods;
     }
+    if (r.followUps && output !== 'none' && ov.prompt == null) out.followUps = r.followUps;
+    if (r.parts) out.parts = partsAt(r.parts, output);
     return out;
   }
 
@@ -360,11 +392,7 @@
     if (out.space == null) out.space = gen.workSpace || 1;
     if (gen.whole) {
       var w = generate(g.name, g.params, partSeed(g.seed, 0), { output: 'steps' });
-      out.prompt = w.prompt;   // a whole-question generator writes the full prompt
-      out.answer = w.answer;
-      if (steps && w.steps.length) out.solution = w.steps.join('\n');
-      delete out.parts;
-      return out;
+      return wholeInto(out, w, steps);
     }
     var count = g.count || 4;
     var seen = {};
@@ -446,11 +474,7 @@
       target.answer = r.answer;
       if (steps && r.steps.length) target.solution = r.steps.join('\n'); else delete target.solution;
     }
-    if (gen.whole) {
-      apply(out, t);
-      delete out.parts;
-      return out;
-    }
+    if (gen.whole) return wholeInto(out, render(t.name, t.vars, { overrides: t.overrides }), steps);
     (out.parts || []).forEach(function (p) { if (p.template) apply(p, p.template); });
     return out;
   }

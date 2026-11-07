@@ -91,6 +91,49 @@ for (const gen of G.list()) {
     }
   }
 }
+// Story questions: calculation parts are right, and no later part (or the story)
+// shows a result from an earlier part (only the givens may be repeated).
+{
+  const numbersIn = (t) => (String(t).replace(/\\,/g, '').match(/\d+(\.\d+)?/g) || []);
+  const stories = G.list().filter((g) => (MW.data.stories || []).some((s) => s.topic + '.' + s.id === g.name));
+  assert.ok(stories.length >= 6, 'stories registered');
+  for (const gen of stories) {
+    for (let seed = 0; seed < 150; seed++) {
+      const b = G.fillBlock({ kind: 'question', generator: { name: gen.name, params: {}, seed: 'st' + seed } });
+      const given = new Set(numbersIn(b.prompt));
+      const shown = [];
+      b.parts.forEach((p, i) => {
+        ['prompt', 'answer', 'solution'].forEach((f) => katexOk(p[f], gen.name + ' part ' + i + ' ' + f));
+        numbersIn(p.prompt).forEach((n) => {
+          if (!given.has(n) && shown.includes(n)) fails.push(gen.name + ' seed st' + seed + ': part ' + String.fromCharCode(97 + i) + ' gives away ' + n + ': ' + p.prompt);
+        });
+        if (!p.thinking) numbersIn(p.answer).forEach((n) => shown.push(n));
+        assert.ok(!/%\w+%/.test(b.prompt + p.prompt + p.answer), gen.name + ' placeholder left: ' + p.prompt);
+      });
+      // Thinking questions off: same story and numbers, only calculation parts.
+      const off = G.fillBlock({ kind: 'question', generator: { name: gen.name, params: { thinking: false }, seed: 'st' + seed } });
+      assert.strictEqual(off.prompt, b.prompt, gen.name + ' thinking switch changed the numbers');
+      assert.ok(off.parts.every((p) => !p.thinking) && off.parts.length === b.parts.filter((p) => !p.thinking).length, gen.name + ' thinking off');
+    }
+  }
+  // Calculation spot checks.
+  const D = MW.data;
+  const val = (d) => Number(MW.sci.mantissa(d.digits)) * Math.pow(10, d.exponent);
+  for (let seed = 0; seed < 100; seed++) {
+    const v = G.pick('rates.typing-race', {}, 'c' + seed);
+    const ra = v.wordsA * 60 / v.secsA, rb = v.wordsB / v.minsB;
+    const it = G.render('rates.typing-race', v);
+    assert.ok(it.parts[0].answer.startsWith(ra > rb ? v.a : v.b), 'typing faster');
+    assert.ok(it.parts[2].answer.includes('$' + MW.math.num(Math.abs(ra - rb) * 60) + '$'), 'typing difference');
+    const l = G.pick('sci.light-travel', {}, 'c' + seed);
+    const mins = val(D.planets.items.find((p) => p.name === l.planet).distance) / 3e5 / 60;
+    const got = Number(G.render('sci.light-travel', l).parts[1].answer.replace(/\\,/g, '').match(/[\d.]+/)[0]);
+    assert.ok(Math.abs(got - mins) / mins < 0.05, 'light minutes ' + l.planet);
+    const s = G.pick('rates.swim-laps', {}, 'c' + seed);
+    assert.ok(G.render('rates.swim-laps', s).parts[0].answer === '$' + 60 / s.mins * s.laps + '$ laps', 'laps per hour');
+  }
+}
+
 // Friendly messages for vars that do not fit.
 assert.ok(G.checkVars('powers.monomials', { letter: 'x', coefficients: [6, 4], exponents: [2, 1], ops: ['divide'] })[0].includes('whole'));
 assert.ok(G.checkVars('sci.to-scientific', { digits: '370', exponent: 3 })[0].includes('nonzero digit'));

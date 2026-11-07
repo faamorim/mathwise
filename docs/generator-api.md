@@ -76,6 +76,12 @@ Returns one item:
   also carries `[{ method, label, steps }]`, one entry per method the settings ask for;
   `steps` is then all of them, each after a "Label:" line, ready to print. A practice
   page can offer the student the choice. Pages that do not know it print `steps`.
+- Optional `parts` (only for a `whole` generator): a story with parts a), b), …, each
+  `{ prompt, answer, steps, thinking? }`. The item's `prompt` is the story and it has no
+  `answer` of its own. `thinking: true` marks a thinking part: no single right answer,
+  `answer` holds possible answers. `fillBlock` puts the story in the block's `prompt` and
+  the parts in `parts` (with `solution`, and `thinking` kept), so pages show it like any
+  question with parts.
 - Items may later carry extra optional fields (see *Planned*); pages ignore what they
   do not know.
 
@@ -192,5 +198,4 @@ These will be added to this contract when they are built:
   `docs/graph-format.md`. Generators only describe graphs; pages draw them.
 - **Practice:** optional `check(item, studentAnswer)` and per-step `hints`, and a
   `method` setting for guided steps (e.g. cross method for factoring).
-- **Written-question data:** real data sets with sources in `generators/data/` for word
-  problems built on templates.
+

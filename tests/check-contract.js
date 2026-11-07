@@ -58,11 +58,13 @@ gens.forEach((gen) => {
   const a = G.generate(n, {}, 'contract', { output: 'steps' });
   const b = G.generate(n, {}, 'contract', { output: 'steps' });
   check(JSON.stringify(a) === JSON.stringify(b), where('not deterministic'));
-  check(isStr(a.prompt) && isStr(a.answer), where('item needs prompt and answer'));
+  // A whole question may instead be a story with parts a), b), …, each with its own answer.
+  const partsOk = (it) => Array.isArray(it.parts) && it.parts.length > 0 && it.parts.every((p) => isStr(p.prompt) && isStr(p.answer));
+  check(isStr(a.prompt) && (isStr(a.answer) || (gen.whole && partsOk(a))), where('item needs prompt and answer (or parts with answers)'));
   check(Array.isArray(a.steps) && a.steps.every((s) => typeof s === 'string'), where('steps must be strings'));
   check(typeof a.workSpace === 'number', where('item workSpace must be a number'));
   const ans = G.generate(n, {}, 'contract', { output: 'answer' });
-  check(ans.steps === undefined && isStr(ans.answer), where("output 'answer' must drop steps only"));
+  check(ans.steps === undefined && (isStr(ans.answer) || (partsOk(ans) && ans.parts.every((p) => p.steps === undefined))), where("output 'answer' must drop steps only"));
   const none = G.generate(n, {}, 'contract', { output: 'none' });
   check(none.answer === undefined && isStr(none.prompt), where("output 'none' must give the prompt only"));
 
@@ -73,7 +75,7 @@ gens.forEach((gen) => {
   check(stored.parts === undefined, where('fillBlock changed its input'));
   const same = G.fillBlock({ kind: 'question', generator: { name: n, params: {}, count: 3, seed: 'doc/2' } });
   check(JSON.stringify(f.parts || f.answer) === JSON.stringify(same.parts || same.answer), where('fillBlock ignores the seed rule'));
-  if (gen.whole) check(isStr(f.prompt) && isStr(f.answer) && !f.parts, where('whole block needs prompt + answer, no parts'));
+  if (gen.whole) check(isStr(f.prompt) && ((isStr(f.answer) && !f.parts) || (!f.answer && partsOk(f))), where('whole block needs prompt + answer, or a story with parts'));
   else check(Array.isArray(f.parts) && f.parts.length === 3 && f.parts.every((p) => isStr(p.prompt) && isStr(p.answer)),
     where('block must have count parts with prompt and answer'));
 
@@ -112,16 +114,18 @@ gens.forEach((gen) => {
   if (filled.parts) filled.parts[1].marks = 2;
   const un = G.unlink(Object.assign({}, stored2, { parts: filled.parts }));
   check(!un.generator && un.template && un.template.name === n && typeof un.template.params === 'object', where('unlink must give template { name, params }'));
-  if (gen.whole) check(un.template.vars && !un.parts, where('whole unlink keeps vars on block.template'));
+  if (gen.whole) check(un.template.vars && (!un.parts || un.parts.every((p) => !p.template)), where('whole unlink keeps vars on block.template'));
   else check(un.parts.every((p) => p.template && p.template.vars) && un.parts[1].marks === 2, where('unlink must put template { vars } on each part and keep marks'));
   const refilled = G.fillBlock(un);
   const strip = (b) => JSON.stringify((b.parts || [b]).map((p) => [p.prompt, p.answer, p.solution]));
   check(strip(refilled) === strip(filled), where('unlinked block differs from the generated one'));
   const tv = gen.whole ? un.template : un.parts[0].template;
   const key = Object.keys(tv.vars).find((k) => typeof tv.vars[k] !== 'object');
-  tv.overrides = { answer: 'is %' + key + '% (100%%)' };
+  const field = gen.whole && filled.parts ? 'prompt' : 'answer';
+  tv.overrides = { [field]: 'is %' + key + '% (100%%)' };
   const ov = G.fillBlock(un);
-  check((ov.parts ? ov.parts[0] : ov).answer === 'is ' + tv.vars[key] + ' (100%)', where('override placeholders not filled'));
+  const shown = (ov.parts && !gen.whole ? ov.parts[0] : ov)[field];   // a slot may show the value as math: $17$
+  check(shown === 'is ' + tv.vars[key] + ' (100%)' || shown === 'is $' + tv.vars[key] + '$ (100%)', where('override placeholders not filled'));
   check(G.placeholders(n, tv.vars).includes(key), where('placeholders() misses ' + key));
   if (!gen.whole) {
     const extra = G.pick(n, un.template.params, 'more');
