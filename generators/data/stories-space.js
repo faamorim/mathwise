@@ -12,7 +12,7 @@
   S.push({
     topic: 'sci', id: 'planet-distance', label: 'How far is a planet from the Sun? (NASA data)',
     source: 'planets',
-    values: { planet: { fact: 'planets' } },
+    values: { planet: { fact: 'planets', label: 'Planet' } },
     ok: function (v) { return v.planet !== 'Earth'; },
     okMessage: 'Choose a planet other than Earth (part b compares it with Earth).',
     stem: 'The mean (average) distance from the Sun to %planet% is about %standard% km. The mean distance from the Sun to Earth is about %earth% km.',
@@ -41,7 +41,7 @@
   S.push({
     topic: 'sci', id: 'light-travel', label: 'How long does sunlight take to reach a planet? (NASA data)',
     source: 'planets',
-    values: { planet: { fact: 'planets' } },
+    values: { planet: { fact: 'planets', label: 'Planet' } },
     stem: 'Light travels about %c% km per second. The mean distance from the Sun to %planet% is about %d% km.',
     given: function (v, D, F) { return { c: F.sci(D.lightSpeed), d: F.sci(F.fact('planets', v.planet).distance) }; },
     parts: [
