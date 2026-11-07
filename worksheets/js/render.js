@@ -32,9 +32,12 @@
 
   // part: the part's index when the space belongs to a part (lets the editor
   // map a dragged work space back to the question or part it came from).
-  function spaceEl(lines, answerHtml, part) {
-    var s = el('div', 'space');
+  function spaceEl(lines, answerHtml, part, lined) {
+    var s = el('div', 'space' + (lined ? ' lined' : ''));
     if (part != null) s.dataset.part = part;
+    // Lined: ruled lines to write sentences on (one per line of space), drawn as
+    // real borders so they print without "background graphics".
+    if (lined) for (var n = 0; n < Math.floor(+lines || 0); n++) s.appendChild(el('div', 'rule-line'));
     s.style.minHeight = 'calc(var(--line) * ' + Math.max(0, +lines || 0) + ')';
     if (answerHtml) s.appendChild(el('div', 'ans', answerHtml));
     return s;
@@ -116,7 +119,21 @@
     return out;
   }
 
+  // Compact sheets (work on separate paper): "5^{-1} =" reads as "5^{-1}".
+  // Only a trailing equals sign goes; prompts with fill-in blanks are kept.
+  function noTrailingEquals(src) {
+    src = String(src == null ? '' : src);
+    if (src.indexOf('[[') >= 0) return src;
+    return src.replace(/\s*=\s*\$\$\s*$/, '$$$$').replace(/\s*=\s*\$\s*$/, '$$').replace(/\s*=\s*$/, '');
+  }
+
+  // Rough length of a prompt as printed (for choosing columns on compact sheets).
+  function printedLength(src) {
+    return String(src || '').replace(/\\[a-zA-Z]+/g, 'x').replace(/[{}$^_\\]/g, '').length;
+  }
+
   function questionFragments(q, index, label, doc, opts) {
+    var compact = !!doc.compact;
     var out = [];
     var isQ = q.kind === 'question';
     var parts = WS.model.hasParts(q);
@@ -127,7 +144,7 @@
     head.appendChild(lab);
     var body = el('div', 'q-body');
     var qFill = { answer: !parts && !q.table && q.answer ? q.answer : '' };
-    var prompt = el('div', 'q-prompt', M.html(q.prompt, withFill(opts, qFill)));
+    var prompt = el('div', 'q-prompt', M.html(compact && !parts ? noTrailingEquals(q.prompt) : q.prompt, withFill(opts, qFill)));
     if (doc.showMarks && isQ) {
       var mk = WS.model.questionMarks(q, doc);
       prompt.insertAdjacentHTML('beforeend',
@@ -136,9 +153,9 @@
     body.appendChild(prompt);
     head.appendChild(body);
     if (!parts && !q.table) {
-      var sp = q.space != null ? q.space : defaultSpace;
+      var sp = doc.compact ? 0 : q.space != null ? q.space : defaultSpace;   // compact: work goes on separate paper
       var ans = opts.showAnswers && qFill.answer ? M.inline(q.answer) : '';
-      if (sp > 0 || ans || opts.nudge) body.appendChild(spaceEl(sp, ans));
+      if (sp > 0 || ans || opts.nudge) body.appendChild(spaceEl(sp, ans, null, !!q.lined));
       out.push(frag(head, index, false));
       return out;
     }
@@ -147,6 +164,12 @@
     if (parts) {
       var cols = Math.min(4, Math.max(1, +q.columns || 1));
       var boxed = q.boxed !== false;
+      if (compact) {
+        // No work space: no boxes, and short parts sit four to a row.
+        boxed = false;
+        var longest = Math.max.apply(null, q.parts.map(function (pp) { return printedLength(noTrailingEquals(pp.prompt)); }));
+        cols = Math.max(cols, longest <= 12 ? 4 : longest <= 18 ? 3 : cols);
+      }
       var partSpace = q.space != null ? q.space : (boxed ? 2 : 1);
       for (var i = 0; i < q.parts.length; i += cols) {
         var row = el('div', 'parts-row cols-' + cols + (boxed ? ' boxed' : ' plain') + (i > 0 ? ' cont' : ''));
@@ -158,11 +181,12 @@
             var line = el('div', 'p-line');
             line.appendChild(el('span', 'p-label', M.escapeHtml(WS.model.partLabel(j, p))));
             var pFill = { answer: p.answer || '' };
-            line.appendChild(el('span', 'p-prompt', M.inline(p.prompt, withFill(opts, pFill))));
+            line.appendChild(el('span', 'p-prompt', M.inline(compact ? noTrailingEquals(p.prompt) : p.prompt, withFill(opts, pFill))));
             cell.appendChild(line);
-            var ps = p.space != null ? p.space : partSpace;
+            // An open-ended (thinking) part gets at least 3 lines unless set by hand.
+            var ps = doc.compact ? 0 : p.space != null ? p.space : (p.thinking ? Math.max(partSpace, 3) : partSpace);
             var pa = opts.showAnswers && pFill.answer ? M.inline(p.answer) : '';
-            if (ps > 0 || pa || opts.nudge) cell.appendChild(spaceEl(ps, pa, j));
+            if (ps > 0 || pa || opts.nudge) cell.appendChild(spaceEl(ps, pa, j, p.lined != null ? !!p.lined : !!q.lined));
           } else {
             cell.classList.add('empty');
           }
@@ -220,6 +244,14 @@
           break;
         case 'table':
           fr = tableFragments(b, i, opts, true);
+          break;
+        case 'notes':
+          // A ruled box for the student's own words (notes, summary, note to future self).
+          var nb = el('div', 'ws-notes');
+          if (b.title) nb.appendChild(el('div', 'notes-title', M.inline(b.title)));
+          if (b.prompt) nb.appendChild(el('div', 'notes-prompt', M.html(b.prompt, opts)));
+          nb.appendChild(spaceEl(+b.lines || 0, '', null, !!b.lined));
+          fr.push(frag(nb, i, false));
           break;
         case 'question':
         case 'example':
@@ -299,10 +331,18 @@
     return out;
   }
 
+  function keyName(doc) { return doc.answers.keyTitle === 'solutions' ? 'Solutions' : 'Teacher key'; }
+
+  // The separate key: final answers, worked solutions, or both (a quick answers page
+  // to check with, then the worked solutions for when a student is stuck).
   function buildKeyFragments(doc) {
-    var worked = doc.answers.key === 'worked';
-    var out = [frag(el('div', 'ws-heading size-m', worked ? 'Teacher key: worked solutions' : 'Teacher key: answers'), null, true)];
-    return out.concat(worked ? workedFragments(doc) : finalAnswerFragments(doc));
+    var mode = doc.answers.key;
+    var name = keyName(doc);
+    function heading(t) { return frag(el('div', 'ws-heading size-m', name + ': ' + t), null, true); }
+    if (mode === 'worked') return [heading('worked solutions')].concat(workedFragments(doc));
+    var out = [heading('answers')].concat(finalAnswerFragments(doc));
+    if (mode === 'both') out = out.concat([{ pageBreak: true }, heading('worked solutions')], workedFragments(doc));
+    return out;
   }
 
   // ---------- pagination ----------
@@ -355,7 +395,7 @@
       });
     }
     keyPages.forEach(function (p, i) {
-      p.querySelector('.page-footer').textContent = 'Teacher key' +
+      p.querySelector('.page-footer').textContent = keyName(doc) +
         (keyPages.length > 1 ? ' · ' + (i + 1) + ' of ' + keyPages.length : '');
     });
     pages.forEach(function (p) {
@@ -381,6 +421,7 @@
   function render(container, doc, opts) {
     opts = opts || {};
     if (WS.themes) WS.themes.apply(container, doc.theme);   // the look; content is below
+    container.classList.toggle('compact', !!doc.compact && opts.view !== 'key');
     var isKey = opts.view === 'key';
     var frags = isKey ? buildKeyFragments(doc) : buildFragments(doc, opts);
     // Images need their size before we can measure; stage them off-screen.

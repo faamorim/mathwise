@@ -253,6 +253,9 @@
           checkbox('Show marks next to questions', function () { return doc.showMarks; },
             function (v) { doc.showMarks = v; }))),
       h('div', { class: 'row' },
+        checkbox('Compact: no work space (students work on separate paper)', function () { return !!doc.compact; },
+          function (v) { if (v) doc.compact = true; else delete doc.compact; })),
+      h('div', { class: 'row' },
         checkbox('Page numbers ("1 out of 3")', function () { return doc.footer.pageNumbers; },
           function (v) { doc.footer.pageNumbers = v; }),
         field('Answers for students', selectInput(doc.answers, 'handout', [
@@ -262,8 +265,13 @@
         field('Teacher key (separate)', selectInput(doc.answers, 'key', [
           ['none', 'None'],
           ['final', 'Final answers'],
-          ['worked', 'Worked solutions']
-        ], { title: 'A separate document for the teacher, printed with “Print key”' })))
+          ['worked', 'Worked solutions'],
+          ['both', 'Answers page, then worked solutions']
+        ], { title: 'A separate document, printed with “Print key”. Both: a quick answers page to check with, then the worked solutions for when you are stuck.' })),
+        doc.answers.key !== 'none' ? field('Key title', selectInput(doc.answers, 'keyTitle', [
+          ['teacher', 'Teacher key'],
+          ['solutions', 'Solutions (for students)']
+        ], { def: 'teacher', title: 'Call it “Solutions” when you hand the key to students' })) : null)
     ));
 
     if (WS.themes) root.appendChild(buildLook(doc));
@@ -322,7 +330,7 @@
 
   var KIND_NAMES = {
     heading: 'Heading', text: 'Text', example: 'Example', question: 'Question',
-    table: 'Table', image: 'Image', pageBreak: 'Page break'
+    table: 'Table', image: 'Image', notes: 'My notes', pageBreak: 'Page break'
   };
 
   function summaryOf(b) {
@@ -338,6 +346,7 @@
       case 'table': s = (b.header || []).join(' | ') || b.rows.length + ' rows'; break;
       case 'image': s = b.caption || (b.src ? 'image' : 'no image yet'); break;
       case 'pageBreak': s = 'next block starts on a new page'; break;
+      case 'notes': s = (b.title || 'Notes') + '  (' + (b.lines || 0) + ' lines)'; break;
     }
     return String(s || '').replace(/\s+/g, ' ').slice(0, 90);
   }
@@ -435,6 +444,16 @@
       case 'question':
       case 'example':
         buildQuestionBody(b, body);
+        break;
+      case 'notes':
+        body.appendChild(h('div', { class: 'row' },
+          field('Title', textInput(b, 'title', { placeholder: 'e.g. In my own words / Note to my future self' }), 'grow'),
+          field('Size (lines)', numInput(b, 'lines', { min: 0, max: 40, step: 1 })),
+          h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Lined', function () { return !!b.lined; },
+            function (v) { if (v) b.lined = true; else delete b.lined; }, 'Ruled lines instead of blank space'))));
+        body.appendChild(field('Instruction for students (optional)', textInput(b, 'prompt', {
+          multiline: true, rows: 2, placeholder: 'e.g. Write what you learned today, as if explaining it to a friend.' })));
+        body.appendChild(h('p', { class: 'muted', text: 'A box for students to write (or sketch) their own notes or summary. Not numbered and not marked.' }));
         break;
       case 'table':
         buildTableEditor(b, body);
@@ -694,7 +713,9 @@
         })),
         parts ? field('Columns', selectInput(q, 'columns', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], { number: true, def: '1' })) : null,
         parts ? h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Boxes', function () { return q.boxed !== false; },
-          function (v) { if (v) delete q.boxed; else q.boxed = false; }, 'Draw a box around each part')) : null));
+          function (v) { if (v) delete q.boxed; else q.boxed = false; }, 'Draw a box around each part')) : null,
+        h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Lined', function () { return !!q.lined; },
+          function (v) { if (v) q.lined = true; else delete q.lined; }, 'Ruled lines in the work space, for written answers (sentences)'))));
       var n = parts ? q.parts.length : 0;
       var more = h('details', { class: 'gen-more', open: state.partsOpen.has(q) || (!synced && !state.partsClosed.has(q)),
         ontoggle: function (ev) {
@@ -731,6 +752,8 @@
       row.appendChild(field(parts ? 'Work space per part (lines)' : 'Work space (lines)', numInput(q, 'space', {
         min: 0, step: 0.5, placeholder: parts ? (q.boxed === false ? '1' : '2') : (q.table ? '-' : (isQ ? '3' : '4'))
       })));
+      if (!q.table) row.appendChild(h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Lined', function () { return !!q.lined; },
+          function (v) { if (v) q.lined = true; else delete q.lined; }, 'Ruled lines in the work space, for written answers (sentences)')));
     }
     if (!parts && !q.table) {
       row.appendChild(field('Answer (for the key)', textInput(q, 'answer', {
@@ -771,7 +794,8 @@
         h('span', { text: isQ ? 'Marks' : '' }), h('span', { text: 'Space' }), h('span', { text: isQ ? 'Steps' : '' }), h('span')));
       q.parts.forEach(function (p, pi) {
         list.appendChild(h('div', { class: 'part-row', 'data-part': pi },
-          h('span', { class: 'lbl', text: model.partLabel(pi, p) }),
+          h('span', { class: 'lbl', text: model.partLabel(pi, p) + (p.thinking ? ' 💭' : ''),
+            title: p.thinking ? 'Thinking (open-ended) part: the key shows possible answers' : null }),
           textInput(p, 'prompt', { placeholder: 'e.g. $5^{-1} =$', mono: true }),
           textInput(p, 'answer', { placeholder: 'answer', emptyDeletes: true, mono: true }),
           isQ ? numInput(p, 'marks', { min: 0, step: 0.5, placeholder: '' + (q.marks != null ? q.marks : state.doc.defaultMarks) }) : h('span'),
@@ -1043,6 +1067,30 @@
           var inp = last.querySelector('.card-body textarea, .card-body input[type=text]');
           if (inp) inp.focus({ preventScroll: true });
         }
+      } }));
+    });
+    // Ready-made blocks for thinking and reflection (Building Thinking Classrooms).
+    var READY = [
+      { text: '+ Thinking question', title: 'An open question with room to write a reason or explanation',
+        make: function () { return { kind: 'question', prompt: 'Give a reason why …', space: 3 }; } },
+      { text: '+ Make your own question', title: 'Students write their own question about the topic, then solve it',
+        make: function () {
+          return { kind: 'question', prompt: 'Make your own question about … Then solve it.', boxed: false,
+            parts: [{ prompt: 'My question:', space: 3 }, { prompt: 'My solution:', space: 5 }] };
+        } },
+      { text: '+ My notes', title: 'A box for students to write their own notes or summary',
+        make: function () { return model.newBlock('notes'); } }
+    ];
+    READY.forEach(function (r) {
+      bar.appendChild(h('button', { class: 'btn ready', text: r.text, title: r.title, onclick: function () {
+        snapshot();
+        var b = r.make();
+        state.doc.blocks.push(b);
+        state.open.add(b);
+        changed(true);
+        var cards = document.querySelectorAll('#blocks .card');
+        var last = cards[cards.length - 1];
+        if (last) last.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } }));
     });
     if (WS.generated && WS.generated.available() && WS.genPanel) {

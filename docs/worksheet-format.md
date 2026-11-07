@@ -47,7 +47,8 @@ this page explains it with examples. Full examples live in [`examples/`](../exam
 | `defaultMarks` | Marks for any question / part that doesn't set its own. |
 | `showMarks` | Print `[2 marks]` next to each question. |
 | `answers.handout` | `"final"` adds an answers page at the end of the handout, counted in the page numbers (good for practice worksheets). Default `"none"`. |
-| `answers.key` | A **separate teacher key**, printed as its own document with *Print key*: `"final"` (answers only, default for quizzes), `"worked"` (each question with its worked solution and answer) or `"none"` (default for worksheets). |
+| `answers.key` | A **separate teacher key**, printed as its own document with *Print key*: `"final"` (answers only, default for quizzes), `"worked"` (each question with its worked solution and answer), `"both"` (the answers page for a quick check, then the worked solutions for students who are stuck) or `"none"` (default for worksheets). |
+| `answers.keyTitle` | `"solutions"` titles the key *Solutions* instead of *Teacher key*, for a key you hand to students. |
 | `paper` | `"letter"` or `"a4"`. |
 
 ## Blocks
@@ -113,6 +114,22 @@ Insert bar (or Ctrl+M in a text box) opens a visual math editor (MathLive): type
 fraction, `^` for a power, `*` for ×, or use its on-screen math keyboard. With the cursor
 inside existing math it edits that math; otherwise it inserts new `$…$`. The file still
 stores plain LaTeX.
+
+## Thinking and reflection blocks
+
+- Work space is blank by default, so students can write, draw or sketch. `"lined": true`
+  on a question (or one part) draws ruled lines instead, one per line of `space`.
+- A `notes` block is a box for the student's own words (notes, a summary, a note to their
+  future self): `{ "kind": "notes", "title": "In my own words", "prompt": "…", "lines": 6 }`
+  (`lines` is its height; add `"lined": true` for ruled lines). Not numbered or marked.
+- The editor's **Add block** has ready-made ones: **Thinking question** (an open question
+  with room to answer), **Make your own question** (a part to write the question and a part
+  to solve it) and **My notes**.
+- `"compact": true` on the document leaves out all work space under questions and parts,
+  for a short sheet where students work on separate paper (fill-in blanks and notes boxes
+  stay). The handout also drops a trailing `=` from prompts, leaves out part boxes, puts
+  short parts three or four to a row and tightens the gaps; the teacher key is unchanged.
+  In the editor: Document › *Compact*.
 
 ## Look (themes)
 

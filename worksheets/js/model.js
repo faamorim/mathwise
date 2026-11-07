@@ -8,8 +8,8 @@
   var SCHEMA_VERSION = 1;
   var STANDARD_FIELDS = ['name', 'date', 'period', 'block'];
   var HANDOUT_ANSWERS = ['none', 'final'];
-  var KEY_MODES = ['none', 'final', 'worked'];
-  var BLOCK_KINDS = ['heading', 'text', 'example', 'question', 'table', 'image', 'pageBreak'];
+  var KEY_MODES = ['none', 'final', 'worked', 'both'];
+  var BLOCK_KINDS = ['heading', 'text', 'example', 'question', 'table', 'image', 'notes', 'pageBreak'];
 
   function letter(i) {
     // a, b, ..., z, aa, ab, ...
@@ -57,6 +57,7 @@
         rows: [['', ''], ['', '']]
       };
       case 'image': return { kind: 'image', src: '', width: 50, align: 'center', caption: '' };
+      case 'notes': return { kind: 'notes', title: 'In my own words', prompt: 'Write (or sketch) what you learned today, as if explaining it to a friend.', lines: 6 };
       case 'pageBreak': return { kind: 'pageBreak' };
     }
     throw new Error('Unknown block kind: ' + kind);
@@ -83,7 +84,8 @@
     if (typeof f.pageNumbers !== 'boolean') f.pageNumbers = true;
     if (!isNum(doc.defaultMarks)) doc.defaultMarks = 1;
     // answers.handout: 'none' | 'final'  (an answers page inside the handout)
-    // answers.key:     'none' | 'final' | 'worked'  (separate teacher key)
+    // answers.key:     'none' | 'final' | 'worked' | 'both'  (separate key; both = answers page, then worked)
+    // answers.keyTitle: 'teacher' (default, "Teacher key") | 'solutions' ("Solutions", to hand to students)
     var a = doc.answers && typeof doc.answers === 'object' ? doc.answers : {};
     if (!a.handout && !a.key && doc.answerKey != null) {
       // Older drafts used a single answerKey setting.
@@ -93,6 +95,7 @@
     delete doc.answerKey;
     if (HANDOUT_ANSWERS.indexOf(a.handout) < 0) a.handout = 'none';
     if (KEY_MODES.indexOf(a.key) < 0) a.key = doc.type === 'quiz' ? 'final' : 'none';
+    if (a.keyTitle !== 'solutions') delete a.keyTitle;
     doc.answers = a;
     if (doc.paper !== 'a4') doc.paper = 'letter';
     if (doc.theme != null && (typeof doc.theme !== 'object' || Array.isArray(doc.theme))) delete doc.theme;
@@ -124,6 +127,11 @@
     if (b.kind === 'table') normalizeTable(b);
     if (b.kind === 'text' && typeof b.content !== 'string') b.content = '';
     if (b.kind === 'heading' && typeof b.text !== 'string') b.text = '';
+    if (b.kind === 'notes') {
+      if (typeof b.title !== 'string') b.title = '';
+      if (typeof b.prompt !== 'string') b.prompt = '';
+      if (!isNum(b.lines) || b.lines < 0) b.lines = 6;
+    }
   }
 
   function hasParts(q) { return Array.isArray(q.parts) && q.parts.length > 0; }
