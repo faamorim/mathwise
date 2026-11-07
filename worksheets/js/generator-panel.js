@@ -123,6 +123,98 @@
     return box;
   }
 
+  /**
+   * Fields for the variables of an unlinked question (descriptor `variables`).
+   *   vars:     the item's current vars
+   *   onChange: function (newVars) -> list of problems (empty = applied).
+   *             On problems the message is shown and the field goes back.
+   * Variables whose `when` does not hold are not shown. A kind this page does
+   * not know is edited as JSON text.
+   */
+  function varControls(gen, vars, onChange) {
+    var cur = JSON.parse(JSON.stringify(vars || {}));
+    var msg = h('p', { class: 'error gen-error', hidden: true });
+    var row = h('div', { class: 'tmpl-vars' });
+
+    function intOk(s) { return /^\s*-?\d+\s*$/.test(s); }
+    function toText(d, v) {
+      if (v == null) return '';
+      if (d.kind === 'list') return (v || []).map(function (x) { return toText(d.of || {}, x); }).join(', ');
+      if (d.kind === 'choice') return String(v);
+      if (typeof v === 'object') return JSON.stringify(v);
+      return String(v);
+    }
+    // Text -> value for one kind; returns { v } or { err }.
+    function parse(d, s) {
+      s = String(s).trim();
+      switch (d.kind) {
+        case 'int': return intOk(s) ? { v: parseInt(s, 10) } : { err: d.label + ' must be a whole number.' };
+        case 'int-or-letter':
+          if (intOk(s)) return { v: parseInt(s, 10) };
+          return /^[A-Za-z]$/.test(s) ? { v: s } : { err: (d.label || 'This') + ' must be a whole number or one letter.' };
+        case 'letter': return /^[A-Za-z]$/.test(s) ? { v: s } : { err: d.label + ' must be one letter.' };
+        case 'digits': return /^\d+$/.test(s) ? { v: s } : { err: d.label + ' must be digits only, like 37.' };
+        case 'choice': {
+          var o = (d.values || []).filter(function (x) { return String(x.value) === s || x.label === s; })[0];
+          return o ? { v: o.value } : { err: (d.label || 'This') + ': choose one of ' + (d.values || []).map(function (x) { return x.label; }).join(', ') + '.' };
+        }
+        case 'list': {
+          var parts = s === '' ? [] : s.split(',');
+          var out = [];
+          for (var i = 0; i < parts.length; i++) {
+            var r = parse(Object.assign({ label: d.label }, d.of || {}), parts[i]);
+            if (r.err) return r;
+            out.push(r.v);
+          }
+          return { v: out };
+        }
+        default:
+          try { return { v: JSON.parse(s) }; } catch (e) { return { err: d.label + ': not valid JSON.' }; }
+      }
+    }
+
+    function tryChange(key, value, redraw) {
+      var next = JSON.parse(JSON.stringify(cur));
+      next[key] = value;
+      var errs = onChange(next) || [];
+      if (errs.length) { msg.textContent = errs.join(' '); msg.hidden = false; redraw(); return; }
+      msg.hidden = true;
+      cur = next;
+    }
+
+    (gen.variables || []).forEach(function (d) {
+      if (lib().varApplies && !lib().varApplies(d, cur)) return;
+      var ctl, redraw;
+      if (d.kind === 'choice') {
+        ctl = h('select');
+        (d.values || []).forEach(function (o, n) { ctl.appendChild(h('option', { value: String(n), text: o.label })); });
+        redraw = function () {
+          var n = (d.values || []).map(function (o) { return o.value; }).indexOf(cur[d.key]);
+          ctl.value = String(Math.max(0, n));
+        };
+        ctl.addEventListener('change', function () { tryChange(d.key, d.values[+ctl.value].value, redraw); });
+      } else if (d.kind === 'toggle') {
+        var c = h('input', { type: 'checkbox' });
+        ctl = h('label', { class: 'check' }, c, 'Yes');
+        redraw = function () { c.checked = !!cur[d.key]; };
+        c.addEventListener('change', function () { tryChange(d.key, c.checked, redraw); });
+      } else {
+        var known = ['int', 'int-or-letter', 'letter', 'digits'].indexOf(d.kind) >= 0;
+        ctl = h('input', { type: 'text', class: 'mono tmpl-var' + (known ? '' : ' wide'),
+          title: d.kind === 'list' ? 'Separate the values with commas' : null });
+        redraw = function () { ctl.value = toText(d, cur[d.key]); };
+        ctl.addEventListener('change', function () {
+          var r = parse(d, ctl.value);
+          if (r.err) { msg.textContent = r.err; msg.hidden = false; redraw(); return; }
+          tryChange(d.key, r.v, redraw);
+        });
+      }
+      redraw();
+      row.appendChild(h('label', { class: 'field tmpl-field' }, h('span', { text: d.label }), ctl));
+    });
+    return h('div', null, row, msg);
+  }
+
   // Generators grouped by topic, in library order.
   function byTopic() {
     var groups = [], seen = {};
@@ -216,5 +308,5 @@
     return panel;
   }
 
-  WS.genPanel = { paramControls: paramControls, picker: picker, byTopic: byTopic };
+  WS.genPanel = { paramControls: paramControls, varControls: varControls, picker: picker, byTopic: byTopic };
 })(window.WS = window.WS || {});
