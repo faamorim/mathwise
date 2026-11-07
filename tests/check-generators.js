@@ -91,30 +91,47 @@ for (const gen of G.list()) {
     }
   }
 }
-// Written questions on real data: answers match the data and the follow-ups.
+// Story questions: calculation parts are right, and no later part (or the story)
+// shows a result from an earlier part (only the givens may be repeated).
 {
+  const numbersIn = (t) => (String(t).replace(/\\,/g, '').match(/\d+(\.\d+)?/g) || []);
+  const stories = G.list().filter((g) => (MW.data.stories || []).some((s) => s.topic + '.' + s.id === g.name));
+  assert.ok(stories.length >= 6, 'stories registered');
+  for (const gen of stories) {
+    for (let seed = 0; seed < 150; seed++) {
+      const b = G.fillBlock({ kind: 'question', generator: { name: gen.name, params: {}, seed: 'st' + seed } });
+      const given = new Set(numbersIn(b.prompt));
+      const shown = [];
+      b.parts.forEach((p, i) => {
+        ['prompt', 'answer', 'solution'].forEach((f) => katexOk(p[f], gen.name + ' part ' + i + ' ' + f));
+        numbersIn(p.prompt).forEach((n) => {
+          if (!given.has(n) && shown.includes(n)) fails.push(gen.name + ' seed st' + seed + ': part ' + String.fromCharCode(97 + i) + ' gives away ' + n + ': ' + p.prompt);
+        });
+        if (!p.thinking) numbersIn(p.answer).forEach((n) => shown.push(n));
+        assert.ok(!/%\w+%/.test(b.prompt + p.prompt + p.answer), gen.name + ' placeholder left: ' + p.prompt);
+      });
+      // Thinking questions off: same story and numbers, only calculation parts.
+      const off = G.fillBlock({ kind: 'question', generator: { name: gen.name, params: { thinking: false }, seed: 'st' + seed } });
+      assert.strictEqual(off.prompt, b.prompt, gen.name + ' thinking switch changed the numbers');
+      assert.ok(off.parts.every((p) => !p.thinking) && off.parts.length === b.parts.filter((p) => !p.thinking).length, gen.name + ' thinking off');
+    }
+  }
+  // Calculation spot checks.
   const D = MW.data;
   const val = (d) => Number(MW.sci.mantissa(d.digits)) * Math.pow(10, d.exponent);
-  const nums = (t) => (t.match(/-?[\d\\,.]+/g) || []).map((x) => Number(x.replace(/\\,/g, ''))).filter((x) => !isNaN(x));
-  for (let seed = 0; seed < 200; seed++) {
-    const r = G.pick('rates.per-hour', { thinking: 'all' }, 'w' + seed);
-    const it = G.render('rates.per-hour', r);
-    assert.ok(it.answer.startsWith('$' + MW.math.num(60 / r.t * r.n) + '$'), 'rates answer ' + JSON.stringify(r));
-    assert.ok(!/%\w+%/.test(it.prompt + it.answer), 'rates placeholder left: ' + it.prompt);
-    const q = G.pick('sci.planet-ratio', {}, 'w' + seed);
-    const want = val(D.planets.items.find((p) => p.name === q.far).distance) / val(D.planets.items.find((p) => p.name === q.near).distance);
-    const got = nums(G.render('sci.planet-ratio', q).answer.split('\n')[0])[0];
-    assert.ok(Math.abs(got - want) / want < 0.05, 'ratio ' + JSON.stringify(q) + ' ' + got + ' vs ' + want);
-    const l = G.pick('sci.light-time', {}, 'w' + seed);
+  for (let seed = 0; seed < 100; seed++) {
+    const v = G.pick('rates.typing-race', {}, 'c' + seed);
+    const ra = v.wordsA * 60 / v.secsA, rb = v.wordsB / v.minsB;
+    const it = G.render('rates.typing-race', v);
+    assert.ok(it.parts[0].answer.startsWith(ra > rb ? v.a : v.b), 'typing faster');
+    assert.ok(it.parts[2].answer.includes('$' + MW.math.num(Math.abs(ra - rb) * 60) + '$'), 'typing difference');
+    const l = G.pick('sci.light-travel', {}, 'c' + seed);
     const mins = val(D.planets.items.find((p) => p.name === l.planet).distance) / 3e5 / 60;
-    const ans = G.render('sci.light-time', l).answer;
-    const gotMin = nums(ans.split('or about')[1])[0];
-    assert.ok(Math.abs(gotMin - mins) / mins < 0.05, 'light ' + l.planet + ' ' + gotMin + ' vs ' + mins);
+    const got = Number(G.render('sci.light-travel', l).parts[1].answer.replace(/\\,/g, '').match(/[\d.]+/)[0]);
+    assert.ok(Math.abs(got - mins) / mins < 0.05, 'light minutes ' + l.planet);
+    const s = G.pick('rates.swim-laps', {}, 'c' + seed);
+    assert.ok(G.render('rates.swim-laps', s).parts[0].answer === '$' + 60 / s.mins * s.laps + '$ laps', 'laps per hour');
   }
-  // Turning follow-ups on or off never changes the numbers.
-  const on = G.fillBlock({ kind: 'question', generator: { name: 'rates.per-hour', params: { thinking: 'all' }, seed: 'f', count: 5 } });
-  const off = G.fillBlock({ kind: 'question', generator: { name: 'rates.per-hour', params: { thinking: 'none' }, seed: 'f', count: 5 } });
-  on.parts.forEach((p, i) => assert.ok(p.prompt.startsWith(off.parts[i].prompt), 'follow-ups changed the numbers'));
 }
 
 // Friendly messages for vars that do not fit.

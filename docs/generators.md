@@ -85,10 +85,12 @@ Example: `examples/recipes/math9-powers-practice-quiz.json` ->
 | `factoring.four-term` | $3x^3+18x^2+8x+48 = (x+6)(3x^2+8)$ | number size, coefficient, negatives |
 | `factoring.full` | $-2x^4+8x^2 = -2x^2(x+2)(x-2)$, $2x^2+20x+50 = 2(x+5)^2$ | what is left (trinomial / difference of squares / perfect square / four terms), common factor size and variable, negative leading term, factor-twice ($x^4-16$), trinomial settings |
 | `factoring.mixed` | Any of the above, shuffled; the key starts with how to recognise the type | question types, trinomial settings |
-| `sci.planet-distance` | Mean distance from the Sun to a planet, standard form ↔ scientific notation (NASA data) | direction, thinking follow-up |
-| `sci.planet-ratio` | How many times farther from the Sun is Neptune than Earth? | thinking follow-up |
-| `sci.light-time` | How long does sunlight take to reach Mars? (seconds and minutes) | thinking follow-up |
-| `rates.per-hour` | "Bobby takes 2 minutes to swim 3 laps. How many laps in one hour?" (scenario library) | scenarios, thinking follow-up |
+| `rates.typing-race` | Two people typing (seconds vs minutes): who is faster, difference in one hour, + thinking parts | thinking questions on/off |
+| `rates.swim-laps` | Laps per hour, time for more laps, + why the rate could change | thinking questions on/off |
+| `rates.hose` | Litres per hour, time to fill the tank, + why it could take longer | thinking questions on/off |
+| `rates.heartbeat` | Beats per minute and per hour, + when the rate changes, why count longer | thinking questions on/off |
+| `sci.planet-distance` | A planet's distance from the Sun (NASA data) in scientific notation, times as far as Earth, + why distances change | thinking questions on/off |
+| `sci.light-travel` | Time for sunlight to reach a planet (seconds, minutes), + seeing the past, rover delays | thinking questions on/off |
 
 Parameters show real values and accepted values (`params` on each generator;
 `G.validate(gen, values)` returns friendly messages). Difficulty presets and
@@ -100,16 +102,26 @@ both methods ticked the key shows each one under its own heading, and the item
 carries them separately in `methods` (contract section 3). Example recipe:
 `examples/recipes/math10-factoring-practice.json`.
 
-## Written questions and the data library
+## Story questions and the library
 
-`generators/data/` holds facts and hand-written content, separate from the code:
-`planets.js` (NASA Planetary Fact Sheet distances, with the source) and
-`rate-scenarios.js` (rate stories with %placeholders% and their thinking follow-ups).
-To add a scenario or a follow-up, edit the data file only; the generator picks it up.
+Story questions are one story followed by parts a), b), c) … Some parts are
+**calculations** (worked steps, one answer); others are **thinking** parts with no single
+right answer (the key gives possible answers: any reasonable, backed-up argument is good
+enough). The *Thinking questions* setting turns those parts on or off without changing
+any numbers.
 
-**Thinking follow-ups** ask students to reason rather than compute ("Give a reason why
-Bobby's rate could change"). Each has *possible answers* for the key. The setting
-*Thinking follow-up* is none / one / all; it never changes the numbers.
+The library is separate from the code. `generators/data/` holds the content:
+`planets.js` (NASA Planetary Fact Sheet, source recorded), `stories-rates.js` and
+`stories-space.js` (the stories; their format is described at the top of
+`stories-rates.js`). `generators/stories.js` is the engine: it turns every story into a
+template named `<topic>.<id>`, so adding a story never means touching code.
+
+In a story every value is marked: a **name**, a number that **varies** (a range or a list
+to choose from), or a **fact** (real data: which planet varies, its distance never does).
+Only names and varying numbers become editable variables; facts stay fixed.
+
+Rule, checked by `tests/check-generators.js`: a part may repeat the givens, never a
+result from an earlier part (no "Would Amira really swim 10 laps?" after asking for 10).
 
 ## Writing a generator (template form)
 
