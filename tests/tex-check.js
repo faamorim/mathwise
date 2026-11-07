@@ -145,4 +145,30 @@ function checkItem(it, given) {
   }
 }
 
-module.exports = { evaluate, checkItem };
+// Factoring (prompt is a polynomial, answer its factored form): the answer and
+// every "$= …$" step must equal the prompt for several values of the variables.
+function checkFactoring(it) {
+  const prompt = only(it.prompt || '');
+  const ans = only(it.answer || '');
+  if (prompt == null || ans == null || /=/.test(prompt) || /=/.test(ans)) return null;
+  const problems = [];
+  const steps = (it.solution || '').split('\n').map((s) => /^\$=(.*)\$$/.exec(s.trim())).filter(Boolean).map((m) => m[1]);
+  try {
+    [0.37, -1.21, 2.3, -0.8].forEach((xv, i) => {
+      const V = {};
+      'abkmnptwxyz'.split('').forEach((c, j) => { V[c] = xv + 0.11 * j * (i % 2 ? -1 : 1); });
+      const want = evaluate(prompt, V);
+      const got = evaluate(ans, V);
+      if (!close(got, want)) problems.push('answer ' + ans + ' = ' + got + ', expected ' + want);
+      steps.forEach((s) => {
+        const g = evaluate(s, V);
+        if (!close(g, want)) problems.push('step = ' + s + ' gives ' + g + ', expected ' + want);
+      });
+    });
+  } catch (e) {
+    return ['could not read: ' + e.message];
+  }
+  return problems;
+}
+
+module.exports = { evaluate, checkItem, checkFactoring };

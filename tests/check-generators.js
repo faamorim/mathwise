@@ -9,7 +9,9 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const katex = require('../vendor/katex/katex.min.js');
-const { checkItem } = require('./tex-check');
+const { checkItem: checkPlain, checkFactoring } = require('./tex-check');
+// Factoring items (topic Factoring) are checked as identities; the rest as before.
+const checkItem = (it, given) => (/^\$[^$=]*\$$/.test(it.prompt || '') && !/=/.test(it.answer || '') ? checkFactoring(it) : checkPlain(it, given));
 const MW = require('../tools/load-generators')();
 const G = MW.generators;
 
@@ -26,7 +28,12 @@ const VARIANTS = {
   'powers.product-quotient': [{ bases: ['variable'] }, { bases: ['negative'], negatives: false }],
   'powers.monomials': [{ terms: 3 }, { negativeCoefficients: false, negatives: false }],
   'powers.power-of-power': [{ bases: ['number'], operations: ['divide'] }],
-  'powers.order': [{ bases: [5, 10], count: 4 }]
+  'powers.order': [{ bases: [5, 10], count: 4 }],
+  'factoring.gcf': [{ terms: 2, variableFactor: false, otherLetters: true }, { terms: 4, negatives: false }],
+  'factoring.difference-of-squares': [{ higherPowers: true, maxRoot: 15 }, { coefficients: false }],
+  'factoring.perfect-square': [{ coefficients: false, negatives: false }],
+  'factoring.trinomial': [{ leading: ['prime'], methods: ['cross', 'sum-product'] }, { leading: ['composite'], methods: ['sum-product'] }, { leading: ['one', 'prime', 'composite'], negatives: false, maxConstant: 12, otherLetters: true }],
+  'factoring.four-term': [{ coefficients: false, negatives: false }, { maxConstant: 12 }]
 };
 
 let items = 0, checked = 0;

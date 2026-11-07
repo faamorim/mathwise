@@ -78,10 +78,21 @@ Example: `examples/recipes/math9-powers-practice-quiz.json` ->
 | `sci.to-scientific` | $3700000$, $0.0000001$ | large/small, digits, exponent size |
 | `sci.normalize` | $247\times10^8$, $0.087\times10^3$ | too big/too small, digits, exponent size |
 | `sci.find-exponent` | $0.0000563=5.63\times10^n$ | large/small, digits, exponent size |
+| `factoring.gcf` | $6x^5-16x^4+12x^2 = 2x^2(3x^3-8x^2+6)$ | terms, size of the common factor, variable in it, negatives |
+| `factoring.difference-of-squares` | $16x^2-9$, $x^6-25$ | square coefficient, largest root, higher powers |
+| `factoring.perfect-square` | $9x^2+24x+16$, $x^2-6x+9$ | square coefficient, largest root, negative middle |
+| `factoring.trinomial` | $x^2-3x-10$, $7x^2+52x+21$, $6x^2+7x-3$ | leading coefficient (1 / prime / several factors), number size, negatives, **methods** (cross method, sum and product; tick both to print both) |
+| `factoring.four-term` | $3x^3+18x^2+8x+48 = (x+6)(3x^2+8)$ | number size, coefficient, negatives |
 
 Parameters show real values and accepted values (`params` on each generator;
 `G.validate(gen, values)` returns friendly messages). Difficulty presets and
 aspect bands (see the generator design doc) are the next layer on top.
+
+Factoring questions are built answer first (pick the factors, expand them). The
+trinomial `methods` setting only changes the worked steps, never the numbers; with
+both methods ticked the key shows each one under its own heading, and the item
+carries them separately in `methods` (contract section 3). Example recipe:
+`examples/recipes/math10-factoring-practice.json`.
 
 ## Writing a generator (template form)
 
