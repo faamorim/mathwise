@@ -163,7 +163,8 @@
             var pFill = { answer: p.answer || '' };
             line.appendChild(el('span', 'p-prompt', M.inline(p.prompt, withFill(opts, pFill))));
             cell.appendChild(line);
-            var ps = doc.compact ? 0 : p.space != null ? p.space : partSpace;
+            // An open-ended (thinking) part gets at least 3 lines unless set by hand.
+            var ps = doc.compact ? 0 : p.space != null ? p.space : (p.thinking ? Math.max(partSpace, 3) : partSpace);
             var pa = opts.showAnswers && pFill.answer ? M.inline(p.answer) : '';
             if (ps > 0 || pa || opts.nudge) cell.appendChild(spaceEl(ps, pa, j, p.lined != null ? !!p.lined : !!q.lined));
           } else {

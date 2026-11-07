@@ -789,7 +789,8 @@
         h('span', { text: isQ ? 'Marks' : '' }), h('span', { text: 'Space' }), h('span', { text: isQ ? 'Steps' : '' }), h('span')));
       q.parts.forEach(function (p, pi) {
         list.appendChild(h('div', { class: 'part-row', 'data-part': pi },
-          h('span', { class: 'lbl', text: model.partLabel(pi, p) }),
+          h('span', { class: 'lbl', text: model.partLabel(pi, p) + (p.thinking ? ' 💭' : ''),
+            title: p.thinking ? 'Thinking (open-ended) part: the key shows possible answers' : null }),
           textInput(p, 'prompt', { placeholder: 'e.g. $5^{-1} =$', mono: true }),
           textInput(p, 'answer', { placeholder: 'answer', emptyDeletes: true, mono: true }),
           isQ ? numInput(p, 'marks', { min: 0, step: 0.5, placeholder: '' + (q.marks != null ? q.marks : state.doc.defaultMarks) }) : h('span'),

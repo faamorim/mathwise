@@ -81,8 +81,9 @@
   function regenerate(doc, i) {
     var b = doc.blocks[i];
     var fresh = build(doc, i);
-    var keep = ['label', 'numbered', 'marks', 'space', 'columns', 'boxed', 'id'];
+    var keep = ['label', 'numbered', 'marks', 'space', 'columns', 'boxed', 'lined', 'id'];
     keep.forEach(function (k) { if (b[k] !== undefined) fresh[k] = b[k]; });
+    if (Array.isArray(fresh.parts)) keepPartFields(b.parts, fresh.parts);
     Object.keys(b).forEach(function (k) { delete b[k]; });
     Object.keys(fresh).forEach(function (k) { b[k] = fresh[k]; });
     return b;
@@ -154,6 +155,7 @@
   function unlink(doc, i) {
     var b = doc.blocks[i];
     var fresh = lib().unlink(b, { docSeed: doc.seed, blockNumber: i + 1 });
+    if (Array.isArray(fresh.parts)) keepPartFields(b.parts, fresh.parts);
     Object.keys(b).forEach(function (k) { delete b[k]; });
     Object.keys(fresh).forEach(function (k) { b[k] = fresh[k]; });
     return b;
@@ -203,8 +205,30 @@
 
   function applyRender(target, r) {
     target.prompt = r.prompt;
+    if (r.parts) {
+      // A story question: the story is the prompt, the questions are its parts.
+      delete target.answer; delete target.solution;
+      target.parts = keepPartFields(target.parts, r.parts.map(function (p) {
+        var it = { prompt: p.prompt, answer: p.answer };
+        if (p.steps && p.steps.length) it.solution = p.steps.join('\n');
+        if (p.thinking) it.thinking = true;
+        return it;
+      }));
+      return;
+    }
     target.answer = r.answer;
     if (r.steps && r.steps.length) target.solution = r.steps.join('\n'); else delete target.solution;
+  }
+
+  // New generated parts keep the teacher's layout fields of the old part at the same place.
+  var GENERATED_FIELDS = ['prompt', 'answer', 'solution', 'template', 'thinking'];
+  function keepPartFields(oldParts, newParts) {
+    (oldParts || []).forEach(function (o, i) {
+      var n = newParts[i];
+      if (!n) return;
+      Object.keys(o).forEach(function (k) { if (GENERATED_FIELDS.indexOf(k) < 0 && n[k] === undefined) n[k] = o[k]; });
+    });
+    return newParts;
   }
 
   /**
