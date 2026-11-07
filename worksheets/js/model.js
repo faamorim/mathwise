@@ -57,7 +57,7 @@
         rows: [['', ''], ['', '']]
       };
       case 'image': return { kind: 'image', src: '', width: 50, align: 'center', caption: '' };
-      case 'notes': return { kind: 'notes', title: 'In my own words', prompt: 'Write what you learned today, as if explaining it to a friend.', lines: 6 };
+      case 'notes': return { kind: 'notes', title: 'In my own words', prompt: 'Write (or sketch) what you learned today, as if explaining it to a friend.', lines: 6 };
       case 'pageBreak': return { kind: 'pageBreak' };
     }
     throw new Error('Unknown block kind: ' + kind);

@@ -253,6 +253,9 @@
           checkbox('Show marks next to questions', function () { return doc.showMarks; },
             function (v) { doc.showMarks = v; }))),
       h('div', { class: 'row' },
+        checkbox('Compact: no work space (students work on separate paper)', function () { return !!doc.compact; },
+          function (v) { if (v) doc.compact = true; else delete doc.compact; })),
+      h('div', { class: 'row' },
         checkbox('Page numbers ("1 out of 3")', function () { return doc.footer.pageNumbers; },
           function (v) { doc.footer.pageNumbers = v; }),
         field('Answers for students', selectInput(doc.answers, 'handout', [
@@ -440,10 +443,12 @@
       case 'notes':
         body.appendChild(h('div', { class: 'row' },
           field('Title', textInput(b, 'title', { placeholder: 'e.g. In my own words / Note to my future self' }), 'grow'),
-          field('Lines', numInput(b, 'lines', { min: 0, max: 40, step: 1 }))));
+          field('Size (lines)', numInput(b, 'lines', { min: 0, max: 40, step: 1 })),
+          h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Lined', function () { return !!b.lined; },
+            function (v) { if (v) b.lined = true; else delete b.lined; }, 'Ruled lines instead of blank space'))));
         body.appendChild(field('Instruction for students (optional)', textInput(b, 'prompt', {
           multiline: true, rows: 2, placeholder: 'e.g. Write what you learned today, as if explaining it to a friend.' })));
-        body.appendChild(h('p', { class: 'muted', text: 'A ruled box for students to write their own notes or summary. Not numbered and not marked.' }));
+        body.appendChild(h('p', { class: 'muted', text: 'A box for students to write (or sketch) their own notes or summary. Not numbered and not marked.' }));
         break;
       case 'table':
         buildTableEditor(b, body);
@@ -1060,14 +1065,14 @@
     });
     // Ready-made blocks for thinking and reflection (Building Thinking Classrooms).
     var READY = [
-      { text: '+ Thinking question', title: 'An open question with lines to write a reason or explanation',
-        make: function () { return { kind: 'question', prompt: 'Give a reason why …', lined: true, space: 3 }; } },
+      { text: '+ Thinking question', title: 'An open question with room to write a reason or explanation',
+        make: function () { return { kind: 'question', prompt: 'Give a reason why …', space: 3 }; } },
       { text: '+ Make your own question', title: 'Students write their own question about the topic, then solve it',
         make: function () {
           return { kind: 'question', prompt: 'Make your own question about … Then solve it.', boxed: false,
-            parts: [{ prompt: 'My question:', lined: true, space: 3 }, { prompt: 'My solution:', space: 5 }] };
+            parts: [{ prompt: 'My question:', space: 3 }, { prompt: 'My solution:', space: 5 }] };
         } },
-      { text: '+ My notes', title: 'A ruled box for students to write their own notes or summary',
+      { text: '+ My notes', title: 'A box for students to write their own notes or summary',
         make: function () { return model.newBlock('notes'); } }
     ];
     READY.forEach(function (r) {

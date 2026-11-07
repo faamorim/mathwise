@@ -116,14 +116,17 @@ stores plain LaTeX.
 
 ## Thinking and reflection blocks
 
-- `"lined": true` on a question (or on one part) draws ruled lines in its work space, one
-  per line of `space`, for written answers such as a reason or an explanation.
-- A `notes` block is a ruled box for the student's own words (notes, a summary, a note to
-  their future self): `{ "kind": "notes", "title": "In my own words", "prompt": "…",
-  "lines": 6 }`. It is not numbered and not marked.
+- Work space is blank by default, so students can write, draw or sketch. `"lined": true`
+  on a question (or one part) draws ruled lines instead, one per line of `space`.
+- A `notes` block is a box for the student's own words (notes, a summary, a note to their
+  future self): `{ "kind": "notes", "title": "In my own words", "prompt": "…", "lines": 6 }`
+  (`lines` is its height; add `"lined": true` for ruled lines). Not numbered or marked.
 - The editor's **Add block** has ready-made ones: **Thinking question** (an open question
-  with lines), **Make your own question** (a lined part for the question and a part to
-  solve it) and **My notes**.
+  with room to answer), **Make your own question** (a part to write the question and a part
+  to solve it) and **My notes**.
+- `"compact": true` on the document leaves out all work space under questions and parts,
+  for a short sheet where students work on separate paper (fill-in blanks and notes boxes
+  stay). In the editor: Document › *Compact*.
 
 ## Look (themes)
 

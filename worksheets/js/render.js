@@ -139,7 +139,7 @@
     body.appendChild(prompt);
     head.appendChild(body);
     if (!parts && !q.table) {
-      var sp = q.space != null ? q.space : defaultSpace;
+      var sp = doc.compact ? 0 : q.space != null ? q.space : defaultSpace;   // compact: work goes on separate paper
       var ans = opts.showAnswers && qFill.answer ? M.inline(q.answer) : '';
       if (sp > 0 || ans || opts.nudge) body.appendChild(spaceEl(sp, ans, null, !!q.lined));
       out.push(frag(head, index, false));
@@ -163,7 +163,7 @@
             var pFill = { answer: p.answer || '' };
             line.appendChild(el('span', 'p-prompt', M.inline(p.prompt, withFill(opts, pFill))));
             cell.appendChild(line);
-            var ps = p.space != null ? p.space : partSpace;
+            var ps = doc.compact ? 0 : p.space != null ? p.space : partSpace;
             var pa = opts.showAnswers && pFill.answer ? M.inline(p.answer) : '';
             if (ps > 0 || pa || opts.nudge) cell.appendChild(spaceEl(ps, pa, j, p.lined != null ? !!p.lined : !!q.lined));
           } else {
@@ -229,7 +229,7 @@
           var nb = el('div', 'ws-notes');
           if (b.title) nb.appendChild(el('div', 'notes-title', M.inline(b.title)));
           if (b.prompt) nb.appendChild(el('div', 'notes-prompt', M.html(b.prompt, opts)));
-          nb.appendChild(spaceEl(+b.lines || 0, '', null, true));
+          nb.appendChild(spaceEl(+b.lines || 0, '', null, !!b.lined));
           fr.push(frag(nb, i, false));
           break;
         case 'question':

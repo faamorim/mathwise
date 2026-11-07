@@ -52,6 +52,7 @@
       }
     },
     "paper": { "enum": ["letter", "a4"], "default": "letter" },
+    "compact": { "type": "boolean", "default": false, "description": "No work space under questions or parts: students work on separate paper." },
     "theme": {
       "type": "object",
       "description": "How the pages look, not what they say: a built-in theme name plus any changed settings. Missing = Classic. See docs/worksheet-format.md.",
@@ -214,11 +215,12 @@
       }
     },
     "notes": {
-      "description": "A ruled box for the student's own words: notes, a summary, a note to their future self. Not numbered or marked.",
+      "description": "A box for the student's own words: notes, a summary, a note to their future self. Not numbered or marked.",
       "properties": {
         "title": { "$ref": "#/$defs/markup" },
         "prompt": { "$ref": "#/$defs/markup" },
-        "lines": { "type": "integer", "minimum": 0, "default": 6 }
+        "lines": { "type": "integer", "minimum": 0, "default": 6, "description": "Height in lines of work space." },
+        "lined": { "type": "boolean", "default": false, "description": "Ruled lines instead of blank space." }
       }
     }
   }
