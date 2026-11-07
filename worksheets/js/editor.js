@@ -21,6 +21,11 @@
     showAnswers: false,
     view: 'handout',
     openSteps: new WeakSet(),
+    genOpen: new WeakSet(),
+    partsOpen: new WeakSet(),
+    partsClosed: new WeakSet(),
+    picking: false,
+    lastGenerator: null,
     open: new WeakSet(),
     undo: [],
     lastField: null
@@ -438,10 +443,21 @@
 
   // ---------- generated questions ----------
 
-  function paramSummary(p) {
-    return Object.keys(p || {}).map(function (k) {
-      var v = p[k];
-      return k + ': ' + (Array.isArray(v) ? v.join(', ') : String(v));
+  // "Largest exponent: 4 · Forms: 2⁻³, 10⁻ⁿ" from the stored params, using the
+  // descriptor's labels when the generator is known.
+  function paramSummary(q) {
+    var p = q.generator.params || {};
+    var gen = WS.generated.descriptor(q);
+    var defs = {};
+    ((gen && gen.params) || []).forEach(function (d) { defs[d.key] = d; });
+    function show(d, v) {
+      if (!d || !d.values) return typeof v === 'boolean' ? (v ? 'on' : 'off') : String(v);
+      var o = d.values.filter(function (x) { return x.value === v; })[0];
+      return o ? o.label : String(v);
+    }
+    return Object.keys(p).map(function (k) {
+      var d = defs[k], v = p[k];
+      return (d ? d.label : k) + ': ' + (Array.isArray(v) ? v.map(function (x) { return show(d, x); }).join(', ') : show(d, v));
     }).join(' · ') || 'default settings';
   }
 
@@ -471,27 +487,80 @@
       var n = Math.max(1, Math.min(20, Math.round(+count.value) || 1));
       redo(function () { q.generator.count = n; G.regenerate(doc, i); });
     });
+    var settings = null;
+    var gen = G.descriptor(q);
+    if (gen && (gen.params || []).length) {
+      var controls = WS.genPanel.paramControls(gen, q.generator.params, function (k, v) {
+        var applied = false;
+        redo(function () {
+          q.generator.params = q.generator.params || {};
+          q.generator.params[k] = v;
+          G.regenerate(doc, i);
+          applied = true;
+        });
+        if (!applied) controls.reset(q.generator.params);
+      });
+      settings = h('details', { class: 'gen-settings', open: state.genOpen.has(q),
+        ontoggle: function (ev) { if (ev.target.open) state.genOpen.add(q); else state.genOpen.delete(q); } },
+        h('summary', { text: 'Settings' }),
+        controls,
+        h('button', { class: 'btn small', text: 'Reset to defaults',
+          title: 'Use the generator\'s default settings',
+          onclick: function () { redo(function () { delete q.generator.params; G.regenerate(doc, i); }); } }));
+    }
     return h('div', { class: 'gen-box' + (synced ? '' : ' edited') },
       h('div', { class: 'row' },
         h('span', { class: 'gen-title', text: '⚙ Generated: ' + G.title(q) }),
-        h('span', { class: 'muted', text: paramSummary(q.generator.params) })),
+        h('span', { class: 'muted', text: paramSummary(q) })),
       h('div', { class: 'row' },
         field('Seed', seed),
-        G.available() ? field('Parts', count) : null,
+        G.available() && !(G.descriptor(q) || {}).whole ? field('Parts', count) : null,
         h('div', { class: 'field' }, h('span', { text: ' ' }),
           h('button', { class: 'btn small primary', text: '🎲 New seed',
             title: 'Make new questions of the same kind (Undo brings the old ones back)',
             onclick: function () { redo(function () { G.reroll(doc, i); }); } }))),
       synced ? null : h('p', { class: 'muted warn',
         text: G.available() ? 'Changed by hand: saved with all its text. A new seed replaces your changes.'
-          : 'The generator library did not load, so this question cannot be regenerated here.' }));
+          : 'The generator library did not load, so this question cannot be regenerated here.' }),
+      settings);
   }
 
   function buildQuestionBody(q, body) {
     var isQ = q.kind === 'question';
     var parts = model.hasParts(q);
     var many = parts || !!q.table;
-    if (isQ && WS.generated && WS.generated.isGenerated(q)) body.appendChild(generatorBox(q));
+    var generated = isQ && WS.generated && WS.generated.isGenerated(q);
+    var whole = generated && WS.generated.descriptor(q) && WS.generated.descriptor(q).whole;
+    if (generated) {
+      // A generated question is mostly driven by its settings: show those, the
+      // instructions and the layout, and fold the generated text away until the
+      // teacher wants to read or change it by hand.
+      body.appendChild(generatorBox(q));
+      var synced = WS.generated.available() && WS.generated.inSync(state.doc, state.doc.blocks.indexOf(q));
+      if (!whole) {
+        body.appendChild(field('Instructions', textInput(q, 'prompt', { placeholder: 'e.g. Simplify' })));
+      }
+      body.appendChild(h('div', { class: 'row' },
+        field(parts ? 'Marks per part' : 'Marks', numInput(q, 'marks', {
+          min: 0, step: 0.5, placeholder: String(state.doc.defaultMarks), title: 'Empty = document default'
+        })),
+        field(parts ? 'Work space per part (lines)' : 'Work space (lines)', numInput(q, 'space', {
+          min: 0, step: 0.5, placeholder: parts ? (q.boxed === false ? '1' : '2') : '3'
+        })),
+        parts ? field('Columns', selectInput(q, 'columns', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], { number: true, def: '1' })) : null,
+        parts ? h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Boxes', function () { return q.boxed !== false; },
+          function (v) { if (v) delete q.boxed; else q.boxed = false; }, 'Draw a box around each part')) : null));
+      var n = parts ? q.parts.length : 0;
+      var more = h('details', { class: 'gen-more', open: state.partsOpen.has(q) || (!synced && !state.partsClosed.has(q)),
+        ontoggle: function (ev) {
+          if (ev.target.open) { state.partsOpen.add(q); state.partsClosed.delete(q); }
+          else { state.partsOpen.delete(q); state.partsClosed.add(q); }
+        } },
+        h('summary', { text: (parts ? 'Show the ' + n + ' generated part' + (n === 1 ? '' : 's') : 'Show the generated question') +
+          ' (label, answers, steps, edit by hand)' }));
+      body.appendChild(more);
+      body = more;
+    }
 
     body.appendChild(h('div', { class: 'row' },
       field('Label', textInput(q, 'label', {
@@ -501,19 +570,23 @@
         checkbox('No label', function () { return q.numbered === false; }, function (v) {
           if (v) q.numbered = false; else delete q.numbered;
         }, 'Hide the number/label (and skip it in the numbering)'))));
-    body.appendChild(field(isQ ? 'Question / instructions' : 'Example', textInput(q, 'prompt', {
-      multiline: true, rows: 3, placeholder: isQ ? 'e.g. Write in scientific notation' : 'e.g. Simplify $$\\frac{2.4\\times10^{10}}{3200}$$'
-    })));
+    if (!generated || whole) {
+      body.appendChild(field(isQ ? 'Question / instructions' : 'Example', textInput(q, 'prompt', {
+        multiline: true, rows: 3, placeholder: isQ ? 'e.g. Write in scientific notation' : 'e.g. Simplify $$\\frac{2.4\\times10^{10}}{3200}$$'
+      })));
+    }
 
     var row = h('div', { class: 'row' });
-    if (isQ) {
+    if (isQ && !generated) {
       row.appendChild(field(many ? 'Marks per part' : 'Marks', numInput(q, 'marks', {
         min: 0, step: 0.5, placeholder: String(state.doc.defaultMarks), title: 'Empty = document default'
       })));
     }
-    row.appendChild(field(parts ? 'Work space per part (lines)' : 'Work space (lines)', numInput(q, 'space', {
-      min: 0, step: 0.5, placeholder: parts ? (q.boxed === false ? '1' : '2') : (q.table ? '-' : (isQ ? '3' : '4'))
-    })));
+    if (!generated) {
+      row.appendChild(field(parts ? 'Work space per part (lines)' : 'Work space (lines)', numInput(q, 'space', {
+        min: 0, step: 0.5, placeholder: parts ? (q.boxed === false ? '1' : '2') : (q.table ? '-' : (isQ ? '3' : '4'))
+      })));
+    }
     if (!parts && !q.table) {
       row.appendChild(field('Answer (for the key)', textInput(q, 'answer', {
         placeholder: 'e.g. $x = 5$', emptyDeletes: true
@@ -532,8 +605,8 @@
     var partsBox = h('div', { class: 'sub' });
     partsBox.appendChild(h('div', { class: 'row' },
       h('span', { class: 'sub-title', text: 'Parts a), b), c)…' }),
-      parts ? field('Columns', selectInput(q, 'columns', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], { number: true, def: '1' })) : null,
-      parts ? h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Boxes', function () { return q.boxed !== false; },
+      parts && !generated ? field('Columns', selectInput(q, 'columns', [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], { number: true, def: '1' })) : null,
+      parts && !generated ? h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Boxes', function () { return q.boxed !== false; },
         function (v) { if (v) delete q.boxed; else q.boxed = false; }, 'Draw a box around each part')) : null,
       h('div', { class: 'field' }, h('span', { text: ' ' }), h('div', null,
         h('button', { class: 'btn small', text: '+ Add part', onclick: function () {
@@ -789,6 +862,28 @@
   function buildAddBar() {
     var bar = $('add-bar');
     bar.innerHTML = '';
+    if (state.picking) {
+      bar.appendChild(WS.genPanel.picker({
+        last: state.lastGenerator,
+        onAdd: function (g) {
+          snapshot();
+          state.picking = false;
+          state.lastGenerator = g.name;
+          var b = { kind: 'question', generator: g };
+          state.doc.blocks.push(b);
+          state.open.add(b);
+          try { WS.generated.regenerate(state.doc, state.doc.blocks.length - 1); }
+          catch (e) { alert(e.message || e); }
+          buildAddBar();
+          changed(true);
+          var cards = document.querySelectorAll('#blocks .card');
+          var last = cards[cards.length - 1];
+          if (last) last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        },
+        onCancel: function () { state.picking = false; buildAddBar(); }
+      }));
+      return;
+    }
     ['question', 'example', 'text', 'heading', 'table', 'image', 'pageBreak'].forEach(function (k) {
       bar.appendChild(h('button', { class: 'btn', text: '+ ' + KIND_NAMES[k], onclick: function () {
         snapshot();
@@ -805,6 +900,15 @@
         }
       } }));
     });
+    if (WS.generated && WS.generated.available() && WS.genPanel) {
+      bar.appendChild(h('button', { class: 'btn', text: '+ Generated question',
+        title: 'Pick a kind of question and let the generator write the parts',
+        onclick: function () {
+          state.picking = true;
+          buildAddBar();
+          $('add-bar').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } }));
+    }
   }
 
   function buildAll() {

@@ -106,8 +106,21 @@ Answers stored in blanks go into the answer key, and appear in red when
 "Show answers" is ticked (teacher copy). If a part has an `answer` and its prompt
 has an empty blank, the answer is shown in that blank.
 
-## For problem generators (later)
+## Generated questions
 
-Any block may carry an `id` and a `generator` object
-(`{ "name": "…", "params": {…}, "seed": 42 }`) recording how it was produced,
-so a generator can rebuild or vary it. The editor keeps unknown properties as they are.
+A question block may carry a `generator` object
+(`{ "name": "powers.monomials", "params": {…}, "seed": "unit3/8", "count": 4 }`) recording
+how it was produced; its exact form and the seed rule are in
+[generator-api.md](generator-api.md). Blocks may also carry an `id`. The editor keeps
+unknown properties as they are.
+
+In the editor:
+
+- **+ Generated question** (Add block) opens a picker: choose the kind of question
+  (grouped by topic), its settings and the number of parts, see a sample, then add it.
+- A generated question's card shows **Settings** built from the generator's own
+  parameters (numbers, choices, sets of forms, on/off). A change is checked first and
+  explained if it is not allowed; otherwise the parts are made again.
+  **Reset to defaults** removes the stored `params`.
+- Only values that differ from the defaults are stored when a question is added; a
+  setting changed later is stored as its real value.

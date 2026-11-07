@@ -207,3 +207,23 @@ input.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1
 input.seed { width: 11em; }
 input.count { width: 4.5em; }
 .warn { color: #8a6200; margin: 4px 0 0; }
+
+/* Generator settings and the "Add generated question" picker (js/generator-panel.js) */
+.gen-settings { margin: 6px 0 2px; }
+.gen-settings > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #2a4f86; }
+.gen-settings > .btn { margin-top: 6px; }
+.gen-params { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; }
+.gen-param.gen-set { flex-basis: 100%; }
+.gen-set { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+input.gen-num { width: 5.5em; }
+.gen-error { margin: 6px 0 0; }
+.gen-picker { flex: 1 1 100%; padding: 10px; border: 1px solid #c9d8f0; background: #f3f7fd; border-radius: 6px; }
+.gen-picker > .row { margin: 6px 0; align-items: flex-end; }
+.gen-pick { max-width: 100%; }
+.gen-preview { flex: 1; min-width: 0; font-size: 14px; }
+.gen-samples { margin: 4px 0 0; padding-left: 1.6em; }
+.gen-samples li { margin: 2px 0; }
+.gen-sample-ans { color: #b3261e; margin-left: 10px; }
+.gen-sample-ans:before { content: "→ "; color: #888; }
+.gen-more { margin-top: 8px; border-top: 1px dashed #d5dbe5; padding-top: 6px; }
+.gen-more > summary { cursor: pointer; font-size: 13px; color: #2a4f86; margin-bottom: 4px; }

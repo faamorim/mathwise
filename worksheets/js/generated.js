@@ -124,6 +124,9 @@
     return out;
   }
 
+  // The generator's descriptor (null when the library or the generator is missing).
+  function descriptor(b) { return isGenerated(b) ? genOf(b) : null; }
+
   function title(b) { var g = genOf(b); return g ? g.title : b.generator.name; }
 
   WS.generated = {
@@ -137,6 +140,7 @@
     rerollAll: rerollAll,
     compact: compact,
     title: title,
+    descriptor: descriptor,
     newSeed: newSeed
   };
 })(window.WS = window.WS || {});
