@@ -82,6 +82,11 @@ Returns one item:
   `answer` holds possible answers. `fillBlock` puts the story in the block's `prompt` and
   the parts in `parts` (with `solution`, and `thinking` kept), so pages show it like any
   question with parts.
+- Optional `graph`: a Cartesian plane and what is on it, in the format of
+  `docs/graph-format.md`. What only the key should show is marked `key: true` (so
+  "Graph $y=2x+1$" gives the student an empty grid and the key the line). `fillBlock`
+  copies it to the part (or block, for `whole`). Pages draw it with
+  `Mathwise.graph.sample`; pages that cannot draw yet ignore it.
 - Items may later carry extra optional fields (see *Planned*); pages ignore what they
   do not know.
 

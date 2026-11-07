@@ -172,6 +172,7 @@
     return parts.map(function (p) {
       var q = { prompt: p.prompt };
       if (p.thinking) q.thinking = true;
+      if (p.graph) q.graph = p.graph;
       if (output !== 'none') q.answer = p.answer;
       if (output === 'steps') q.steps = p.steps || [];
       return q;
@@ -181,12 +182,14 @@
   function wholeInto(out, w, steps) {
     var old = out.parts;
     out.prompt = w.prompt;   // a whole-question generator writes the full prompt
-    delete out.answer; delete out.solution; delete out.parts;
+    delete out.answer; delete out.solution; delete out.parts; delete out.graph;
+    if (w.graph) out.graph = w.graph;
     if (w.parts) {
       out.parts = w.parts.map(function (p, i) {
         var it = { prompt: p.prompt, answer: p.answer };
         if (steps && p.steps && p.steps.length) it.solution = p.steps.join('\n');
         if (p.thinking) it.thinking = true;
+        if (p.graph) it.graph = p.graph;
         return keepExtras(it, old && old[i]);   // marks, space, label stay with their position
       });
       return out;
@@ -219,6 +222,7 @@
     }
     if (r.followUps && output !== 'none') out.followUps = r.followUps;
     if (r.parts) out.parts = partsAt(r.parts, output);
+    if (r.graph) out.graph = r.graph;
     return out;
   }
 
@@ -343,6 +347,7 @@
     }
     if (r.followUps && output !== 'none' && ov.prompt == null) out.followUps = r.followUps;
     if (r.parts) out.parts = partsAt(r.parts, output);
+    if (r.graph) out.graph = r.graph;
     return out;
   }
 
@@ -386,6 +391,7 @@
     function toItem(r) {
       var it = { prompt: r.prompt, answer: r.answer };
       if (steps && r.steps && r.steps.length) it.solution = r.steps.join('\n');
+      if (r.graph) it.graph = r.graph;
       return it;
     }
     if (out.prompt == null) out.prompt = gen.prompt || 'Answer';
@@ -411,7 +417,7 @@
   }
 
   // Part fields the library does not own (marks, space, label, …) survive a re-render.
-  var OWNED = { prompt: 1, answer: 1, solution: 1, template: 1 };
+  var OWNED = { prompt: 1, answer: 1, solution: 1, template: 1, graph: 1 };
   function keepExtras(item, old) {
     if (!old) return item;
     Object.keys(old).forEach(function (k) { if (!OWNED[k] && item[k] === undefined) item[k] = old[k]; });
@@ -474,6 +480,7 @@
       target.prompt = r.prompt;
       target.answer = r.answer;
       if (steps && r.steps.length) target.solution = r.steps.join('\n'); else delete target.solution;
+      if (r.graph) target.graph = r.graph; else delete target.graph;
     }
     if (gen.whole) return wholeInto(out, render(t.name, t.vars, { overrides: t.overrides }), steps);
     (out.parts || []).forEach(function (p) { if (p.template) apply(p, p.template); });

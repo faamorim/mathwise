@@ -85,6 +85,8 @@ Example: `examples/recipes/math9-powers-practice-quiz.json` ->
 | `factoring.four-term` | $3x^3+18x^2+8x+48 = (x+6)(3x^2+8)$ | number size, coefficient, negatives |
 | `factoring.full` | $-2x^4+8x^2 = -2x^2(x+2)(x-2)$, $2x^2+20x+50 = 2(x+5)^2$ | what is left (trinomial / difference of squares / perfect square / four terms), common factor size and variable, negative leading term, factor-twice ($x^4-16$), trinomial settings |
 | `factoring.mixed` | Any of the above, shuffled; the key starts with how to recognise the type | question types, trinomial settings |
+| `linear.graph-line` | Graph $y=-\frac23x+1$: empty grid for the student, the line and a table of points in the key | slopes (whole / fractions / zero), negative slopes, largest y-intercept, plane size, **worked steps by** (table of values, y-intercept and slope) |
+| `linear.equation-from-graph` | A line on a grid, write $y=mx+b$ | slopes, negative slopes, largest y-intercept, plane size |
 | `rates.typing-race` | Two people typing (seconds vs minutes): who is faster, difference in one hour, + thinking parts | thinking questions on/off |
 | `rates.swim-laps` | Laps per hour, time for more laps, + why the rate could change | thinking questions on/off |
 | `rates.hose` | Litres per hour, time to fill the tank, + why it could take longer | thinking questions on/off |
@@ -101,6 +103,15 @@ trinomial `methods` setting only changes the worked steps, never the numbers; wi
 both methods ticked the key shows each one under its own heading, and the item
 carries them separately in `methods` (contract section 3). Example recipe:
 `examples/recipes/math10-factoring-practice.json`.
+
+## Graphs
+
+Generators can give a `graph` with an item: the plane, and what is on it, in the
+format of `docs/graph-format.md`. `generators/graph.js` checks a graph and turns its
+functions into points, so pages draw without reading any maths. Lines are picked so
+they pass through at least three whole-number points on the plane; the tests check that
+the line drawn is the answer's equation and that every marked point is on it. Example
+recipe: `examples/recipes/math10-linear-graphs.json`.
 
 ## Story questions and the library
 
