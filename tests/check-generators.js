@@ -182,6 +182,16 @@ for (const gen of G.list()) {
   assert.strictEqual(c('-1/2x+3', 4), 1);
   assert.strictEqual(c('2(x-1)^2', 3), 8);
   assert.strictEqual(c('abs(x)-3', -5), 2);
+  // Lines end on the edge (no overshoot), key items are marked, labels get a spot.
+  {
+    const g = { x: { min: -6, max: 6 }, y: { min: -6, max: 6 }, items: [{ type: 'function', expr: '2x+1', label: 'L', key: true }, { type: 'function', expr: 'x^2-4', domain: [-2, 1], ends: ['open', 'closed'] }] };
+    const s = MG.sample(g, { key: true });
+    assert.ok(s.lines.every((l) => l.points.every((p) => p[1] >= -6 && p[1] <= 6)), 'curves stay on the plane');
+    assert.strictEqual(JSON.stringify(s.lines[0].points[0]), '[-3.5,-6]');
+    assert.ok(s.lines[0].key === true && s.lines[1].key === false, 'key marked on lines');
+    assert.ok(Math.abs(s.lines[0].labelAt[1] - (2 * s.lines[0].labelAt[0] + 1)) < 1e-6, 'label spot is on the line');
+    assert.strictEqual(JSON.stringify(s.dots.map((d) => [d.at, d.open])), '[[[-2,0],true],[[1,-3],false]]');
+  }
   assert.ok(MG.check({ x: { min: 0, max: 5 }, y: { min: 0, max: 5 }, items: [{ type: 'function', expr: '2x+' }] })[0].includes('cannot read'));
   console.log('Graphs OK: ' + graphs + ' generated graphs checked.');
 }

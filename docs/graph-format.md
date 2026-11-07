@@ -105,5 +105,16 @@ like on the board). Anything else is an error from `Mathwise.graph.check`.
 | --- | --- |
 | `Mathwise.graph.check(graph)` | Friendly messages (empty list when the graph is fine). |
 | `Mathwise.graph.compile(expr)` | A function `x -> y` (throws on a bad expression). |
-| `Mathwise.graph.sample(graph, { key })` | What to draw, in graph units, with key items left out unless `key` is true: `{ lines: [{ points: [[x,y],…], style, ends, label, key }], dots: [{ at, open, label, key }], texts: [{ at, text, key }] }`. Function curves are cut where they leave the plane or are undefined. |
+| `Mathwise.graph.sample(graph, { key })` | What to draw, in graph units, with key items left out unless `key` is true: `{ lines: [{ points: [[x,y],…], style, ends, label, labelAt, key }], dots: [{ at, open, label, key }], texts: [{ at, text, key }] }`. See the notes below. |
 | `Mathwise.graph.ticks(axis)` | The numbered tick positions (and texts) of an axis. |
+
+Notes on `sample` for pages:
+
+- Function curves are cut into pieces where they leave the plane or are undefined, and
+  each piece ends exactly on the plane's edge, so no clipping is needed.
+- `ends` on a line is only for arrow heads (`"arrow"`). Open and closed ends are already
+  in `dots`, so draw those from `dots` and do not draw them again from `ends`.
+- `labelAt` (on a line with a `label`) is where to put the label: a point on the line
+  near its right end, a little inside the plane. Place the text beside that point.
+- `key` is `true` on every line, dot and text that only the teacher key shows (an item
+  marked `key`, or a graph marked `key`), so a page can tint key items.
