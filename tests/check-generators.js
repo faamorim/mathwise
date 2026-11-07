@@ -33,6 +33,8 @@ const VARIANTS = {
   'factoring.difference-of-squares': [{ higherPowers: true, maxRoot: 15 }, { coefficients: false }],
   'factoring.perfect-square': [{ coefficients: false, negatives: false }],
   'factoring.trinomial': [{ leading: ['prime'], methods: ['cross', 'sum-product'] }, { leading: ['composite'], methods: ['sum-product'] }, { leading: ['one', 'prime', 'composite'], negatives: false, maxConstant: 12, otherLetters: true }],
+  'factoring.full': [{ negativeLead: true, kinds: ['difference-of-squares'], maxFactor: 10 }, { kinds: ['four-term', 'trinomial'], leading: ['composite'], methods: ['cross', 'sum-product'] }],
+  'factoring.mixed': [{ kinds: ['four-term', 'full', 'gcf'], higherPowers: true }],
   'factoring.four-term': [{ coefficients: false, negatives: false }, { maxConstant: 12 }]
 };
 
@@ -63,13 +65,20 @@ let edited = 0;
 for (const gen of G.list()) {
   for (let seed = 0; seed < 60; seed++) {
     const base = G.pick(gen.name, {}, 'edit' + seed, { index: seed % 6, count: 6 });
-    for (const k of Object.keys(base)) {
-      const vals = Array.isArray(base[k]) ? base[k].map((_, i) => i) : [null];
-      for (const i of vals) {
+    // Paths to every number: top level, inside lists, and inside nested template vars.
+    const paths = [];
+    (function walk(obj, path) {
+      Object.keys(obj).forEach((k) => {
+        if (typeof obj[k] === 'number') paths.push(path.concat(k));
+        else if (obj[k] && typeof obj[k] === 'object') walk(obj[k], path.concat(k));
+      });
+    })(base, []);
+    for (const path of paths) {
+      {
         for (const d of [-3, -1, 1, 2, 5]) {
           const vars = JSON.parse(JSON.stringify(base));
-          if (i === null) { if (typeof vars[k] !== 'number') continue; vars[k] += d; }
-          else { if (typeof vars[k][i] !== 'number') continue; vars[k][i] += d; }
+          let o = vars; for (const k of path.slice(0, -1)) o = o[k];
+          o[path[path.length - 1]] += d;
           if (G.checkVars(gen, vars).length) continue;
           const r = G.render(gen.name, vars);
           const it = { prompt: r.prompt, answer: r.answer, solution: r.steps.join('\n') };

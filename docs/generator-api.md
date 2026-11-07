@@ -128,7 +128,13 @@ generate               =  render(pick(...))         checked by tests/check-contr
 { key, label, kind: 'choice', values: [{ value, label }] }
 { key, label, kind: 'toggle' }                          // true / false
 { key, label, kind: 'list', of: { kind, ... }, minLength?, maxLength? }
+{ key, label, kind: 'vars', by: 'kind', templates: { trinomial: 'factoring.trinomial', ... } }
 ```
+
+`vars` holds the vars of another template, chosen by the value of the variable named in
+`by` (`varTemplate(d, vars)` gives the generator name). A page shows that template's own
+variables inside (recursively). `checkVars` checks them too. Used by `factoring.full`
+(common factor, then a trinomial / difference of squares / …) and `factoring.mixed`.
 
 Any variable may have `when: { otherKey: [values] }`: it is used (and shown) only when
 the other variable has one of those values (for example `k` only for the form

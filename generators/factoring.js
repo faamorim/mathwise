@@ -136,12 +136,11 @@
     ],
     checkVars: function (x) {
       if (gcd(x.p, x.q) !== 1) return ['$' + x.p + '$ and $' + x.q + '$ share a factor: take out the common factor first (use Full factoring).'];
-      if (x.m % 2 === 0) return ['With the power ' + x.m + ', the first factor factors again: use Full factoring.'];
       return [];
     },
     pick: function (v, rng) {
       var letter = pickLetter(v, rng);
-      var m = v.higherPowers && rng.chance(0.5) ? 3 : 1;
+      var m = v.higherPowers && rng.chance(0.5) ? rng.pick([2, 3]) : 1;
       var p, q;
       for (var t = 0; t < 100; t++) {
         p = v.coefficients && rng.chance(0.6) ? rng.int(2, Math.min(7, v.maxRoot)) : 1;
@@ -151,16 +150,26 @@
       return { letter: letter, p: p, m: m, q: q };
     },
     render: function (x) {
-      var v = x.letter, a = polyTex([{ c: x.p, e: x.m }], v);
+      var v = x.letter, p = x.p, m = x.m, q = x.q;
+      var a = polyTex([{ c: p, e: m }], v);
+      var done = [];   // factors that are finished, like (x^2+4)
+      var steps = ['Both terms are perfect squares, and they are subtracted', '$= ' + sq(a) + '-' + q + '^2$'];
+      for (;;) {
+        done.push('(' + a + '+' + q + ')');
+        var last = '(' + a + '-' + q + ')';
+        steps.push('$= ' + done.join('') + last + '$');
+        // x^4 - 16 = (x^2 + 4)(x^2 - 4): the second factor is again a difference of squares.
+        if (m % 2 !== 0 || !isSquare(p) || !isSquare(q)) break;
+        p = Math.sqrt(p); q = Math.sqrt(q); m = m / 2;
+        steps.push('$' + a + '-' + Math.pow(q, 2) + '$ is a difference of squares too');
+        a = polyTex([{ c: p, e: m }], v);
+      }
+      var ans = done.join('') + last;
       return {
         prompt: '$' + polyTex([{ c: x.p * x.p, e: 2 * x.m }, { c: -x.q * x.q, e: 0 }], v) + '$',
-        steps: [
-          'Both terms are perfect squares, and they are subtracted',
-          '$= ' + sq(a) + '-' + x.q + '^2$',
-          '$= (' + a + '+' + x.q + ')(' + a + '-' + x.q + ')$'
-        ],
-        answer: '$(' + a + '+' + x.q + ')(' + a + '-' + x.q + ')$',
-        slots: { first: a }
+        steps: steps,
+        answer: '$' + ans + '$',
+        slots: { first: polyTex([{ c: x.p, e: x.m }], v) }
       };
     }
   });
@@ -379,6 +388,193 @@
         ],
         answer: '$(' + f1 + ')(' + f2 + ')$'
       };
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // Full factoring and mixed: they reuse the generators above. Their vars hold
+  // the inner question's own vars (kind 'vars'), so editing works the same way.
+
+  var INNER = {
+    'trinomial': 'factoring.trinomial',
+    'difference-of-squares': 'factoring.difference-of-squares',
+    'perfect-square': 'factoring.perfect-square',
+    'four-term': 'factoring.four-term'
+  };
+  var KIND_LABELS = {
+    'gcf': 'Common factor only',
+    'trinomial': 'Trinomial',
+    'difference-of-squares': 'Difference of squares',
+    'perfect-square': 'Perfect square trinomial',
+    'four-term': 'Four terms, by grouping',
+    'full': 'Common factor, then more'
+  };
+  function kindValues(keys) { return keys.map(function (k) { return { value: k, label: KIND_LABELS[k] }; }); }
+
+  // The expanded polynomial of an inner question, as [{ c, e }] (highest power first).
+  function expand(kind, x) {
+    var byE = {};
+    function add(c, e) { byE[e] = (byE[e] || 0) + c; }
+    if (kind === 'trinomial') { add(x.p * x.q, 2); add(x.p * x.s + x.q * x.r, 1); add(x.r * x.s, 0); }
+    else if (kind === 'difference-of-squares') { add(x.p * x.p, 2 * x.m); add(-x.q * x.q, 0); }
+    else if (kind === 'perfect-square') { add(x.p * x.p, 2); add(2 * x.p * x.q, 1); add(x.q * x.q, 0); }
+    else if (kind === 'four-term') { add(x.b, x.n + 1); add(x.a * x.b, x.n); add(x.c, 1); add(x.a * x.c, 0); }
+    else if (kind === 'gcf') { x.coefficients.forEach(function (c, i) { add(x.g * c, x.exponents[i] + x.k); }); }
+    return Object.keys(byE).map(Number).sort(function (a, b) { return b - a; }).map(function (e) { return { c: byE[e], e: e }; });
+  }
+
+  // Does this math have a + or - at the top level (so it needs brackets after a factor)?
+  function isSum(t) {
+    var d = 0;
+    for (var i = 0; i < t.length; i++) {
+      var ch = t[i];
+      if (ch === '(' || ch === '{') d++;
+      else if (ch === ')' || ch === '}') d--;
+      else if (d === 0 && i > 0 && (ch === '+' || ch === '-')) return true;
+    }
+    return false;
+  }
+  function times(outer, t) {
+    if (outer === '1') return t;
+    if (outer === '-1') return isSum(t) || t[0] === '-' ? '-(' + t + ')' : '-' + t;
+    return outer + (isSum(t) || t[0] === '-' ? '(' + t + ')' : t);
+  }
+
+  function innerPick(kind, v, rng) {
+    var gen = G.get(INNER[kind]);
+    var values = G.defaults(gen);
+    Object.keys(values).forEach(function (k) { if (v[k] !== undefined) values[k] = v[k]; });
+    if (kind === 'difference-of-squares') values.higherPowers = v.higherPowers;
+    return gen.pick(values, rng, { spread: function (key, r) { return r.pick(values[key]); } });
+  }
+
+  var SHARED_PARAMS = [
+    { key: 'leading', label: 'Trinomials: leading coefficient a', type: 'set', default: ['one', 'prime'],
+      values: [
+        { value: 'one', label: 'a = 1' },
+        { value: 'prime', label: 'a is prime' },
+        { value: 'composite', label: 'a has several factors' }
+      ] },
+    { key: 'maxConstant', label: 'Largest number in the factors', type: 'number', min: 2, max: 12, default: 6 },
+    { key: 'negatives', label: 'Negative numbers', type: 'toggle', default: true },
+    { key: 'methods', label: 'Worked steps by (trinomials)', type: 'set', default: ['cross'], values: METHODS },
+    LETTER_PARAM
+  ];
+
+  G.register({
+    name: 'factoring.full',
+    topic: 'Factoring',
+    title: 'Factor fully: common factor first, then the rest',
+    prompt: 'Factor fully',
+    columns: 2,
+    workSpace: 2.5,
+    params: [
+      { key: 'kinds', label: 'After the common factor', type: 'set', default: ['trinomial', 'difference-of-squares', 'perfect-square'],
+        values: kindValues(['trinomial', 'difference-of-squares', 'perfect-square', 'four-term']) },
+      { key: 'maxFactor', label: 'Largest number in the common factor', type: 'number', min: 2, max: 10, default: 5 },
+      { key: 'variableFactor', label: 'Common factor may include the variable', type: 'toggle', default: true },
+      { key: 'negativeLead', label: 'Negative leading term (take out the negative)', type: 'toggle', default: false },
+      { key: 'higherPowers', label: 'Differences of squares that factor twice, like x⁴ − 16', type: 'toggle', default: true }
+    ].concat(SHARED_PARAMS),
+    variables: [
+      { key: 'g', label: 'Common number (negative to take out a −)', kind: 'int', min: -20, max: 20, nonzero: true },
+      { key: 'k', label: 'Common power of the variable', kind: 'int', min: 0, max: 4 },
+      { key: 'kind', label: 'What is left', kind: 'choice', values: kindValues(['trinomial', 'difference-of-squares', 'perfect-square', 'four-term']) },
+      { key: 'inner', label: 'The part left inside', kind: 'vars', by: 'kind', templates: INNER }
+    ],
+    checkVars: function (x) {
+      return x.g === 1 && x.k === 0 ? ['There is no common factor (number 1, power 0): use the other factoring questions.'] : [];
+    },
+    pick: function (v, rng, ctx) {
+      var kind = ctx.spread('kinds', rng);
+      var g = rng.int(2, v.maxFactor);
+      if (v.negativeLead && rng.chance(0.5)) g = -g;
+      var k = v.variableFactor && rng.chance(0.6) ? rng.int(1, 2) : 0;
+      var inner = innerPick(kind, v, rng);
+      return { g: g, k: k, kind: kind, inner: inner };
+    },
+    render: function (x) {
+      var inner = x.inner, v = inner.letter;
+      var r = G.render(INNER[x.kind], inner);
+      var outer = polyTex([{ c: x.g, e: x.k }], v);
+      var insidePoly = polyTex(expand(x.kind, inner), v);
+      var full = expand(x.kind, inner).map(function (t) { return { c: t.c * x.g, e: t.e + x.k }; });
+      var unwrap = function (t) { return t.replace(/^\$|\$$/g, ''); };
+      var steps = [
+        'Greatest common factor: $' + outer + '$' + (x.g < 0 ? ' (take out the negative too)' : ''),
+        '$= ' + times(outer, insidePoly) + '$',
+        'Factor $' + insidePoly + '$: ' + KIND_LABELS[x.kind].toLowerCase()
+      ];
+      function wrapStep(s) {
+        var m = /^\$=\s*(.*)\$$/.exec(s);
+        return m ? '$= ' + times(outer, m[1]) + '$' : s;
+      }
+      var methods;
+      if (r.methods) {
+        methods = r.methods.map(function (m) { return { method: m.method, label: m.label, steps: steps.concat(m.steps.map(wrapStep)) }; });
+      }
+      steps = steps.concat(r.steps.map(wrapStep));
+      var out = {
+        prompt: '$' + polyTex(full, v) + '$',
+        steps: steps,
+        answer: '$' + times(outer, unwrap(r.answer)) + '$',
+        slots: { gcf: outer, inside: insidePoly }
+      };
+      if (methods) out.methods = methods;
+      return out;
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // Mixed: the student chooses the method. Each part is one of the kinds above.
+  var MIXED = {
+    'gcf': 'factoring.gcf',
+    'trinomial': 'factoring.trinomial',
+    'difference-of-squares': 'factoring.difference-of-squares',
+    'perfect-square': 'factoring.perfect-square',
+    'four-term': 'factoring.four-term',
+    'full': 'factoring.full'
+  };
+  var HOW = {
+    'gcf': 'Every term shares a factor: take it out',
+    'trinomial': 'Three terms, no common factor, not a perfect square: trinomial',
+    'difference-of-squares': 'Two squares subtracted: difference of squares',
+    'perfect-square': 'First and last terms are squares and the middle is twice their product: perfect square',
+    'four-term': 'Four terms: group them in pairs',
+    'full': 'Take out the common factor first, then factor what is left'
+  };
+
+  G.register({
+    name: 'factoring.mixed',
+    topic: 'Factoring',
+    title: 'Factor: choose the method (mixed)',
+    prompt: 'Factor fully',
+    columns: 2,
+    workSpace: 2.5,
+    params: [
+      { key: 'kinds', label: 'Question types', type: 'set', default: ['gcf', 'trinomial', 'difference-of-squares', 'perfect-square', 'full'],
+        values: kindValues(['gcf', 'trinomial', 'difference-of-squares', 'perfect-square', 'four-term', 'full']) },
+      { key: 'higherPowers', label: 'Differences of squares that factor twice, like x⁴ − 16', type: 'toggle', default: false }
+    ].concat(SHARED_PARAMS),
+    variables: [
+      { key: 'kind', label: 'Question type', kind: 'choice', values: kindValues(['gcf', 'trinomial', 'difference-of-squares', 'perfect-square', 'four-term', 'full']) },
+      { key: 'inner', label: 'The question', kind: 'vars', by: 'kind', templates: MIXED }
+    ],
+    pick: function (v, rng) {
+      // Shuffled, not spread: the order should not give the method away.
+      var kind = rng.pick(v.kinds);
+      var gen = G.get(MIXED[kind]);
+      var values = G.defaults(gen);
+      Object.keys(values).forEach(function (k) { if (v[k] !== undefined) values[k] = v[k]; });
+      if (kind === 'full') values.kinds = ['trinomial', 'difference-of-squares', 'perfect-square'];
+      return { kind: kind, inner: gen.pick(values, rng, { spread: function (key, r) { return r.pick(values[key]); } }) };
+    },
+    render: function (x) {
+      var r = G.render(MIXED[x.kind], x.inner);
+      var first = HOW[x.kind];
+      var out = { prompt: r.prompt, steps: [first].concat(r.steps), answer: r.answer };
+      if (r.methods) out.methods = r.methods.map(function (m) { return { method: m.method, label: m.label, steps: [first].concat(m.steps) }; });
+      return out;
     }
   });
 

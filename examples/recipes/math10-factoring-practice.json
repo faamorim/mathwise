@@ -17,6 +17,10 @@
     { "kind": "question", "generator": { "name": "factoring.trinomial", "params": { "leading": ["one"], "methods": ["cross", "sum-product"] }, "count": 4 } },
     { "kind": "question", "generator": { "name": "factoring.trinomial", "params": { "leading": ["prime", "composite"], "methods": ["cross", "sum-product"] }, "count": 4 } },
     { "kind": "heading", "text": "Four terms" },
-    { "kind": "question", "generator": { "name": "factoring.four-term", "params": {}, "count": 2 } }
+    { "kind": "question", "generator": { "name": "factoring.four-term", "params": {}, "count": 2 } },
+    { "kind": "heading", "text": "Factor fully" },
+    { "kind": "question", "generator": { "name": "factoring.full", "params": {}, "count": 4 } },
+    { "kind": "heading", "text": "Mixed review" },
+    { "kind": "question", "generator": { "name": "factoring.mixed", "params": {}, "count": 6 } }
   ]
 }

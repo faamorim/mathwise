@@ -220,6 +220,9 @@
       if (!d.values.some(function (o) { return o.value === x; })) return 'choose one of ' + d.values.map(function (o) { return o.label; }).join(', ');
     },
     toggle: function (x) { if (typeof x !== 'boolean') return 'must be on or off'; },
+    // The vars of another template: { key, kind: 'vars', by: 'form', templates: { formValue: 'generator.name' } }.
+    // Checked (deeply) in checkVars; a page shows that template's variables.
+    vars: function (x) { if (!x || typeof x !== 'object' || Array.isArray(x)) return 'must be a set of values'; },
     list: function (x, d) {
       if (!Array.isArray(x)) return 'must be a list';
       if (d.minLength != null && x.length < d.minLength) return 'needs at least ' + d.minLength + ' items';
@@ -250,6 +253,11 @@
       if (!varApplies(d, vars)) return;
       var e = vars[d.key] === undefined ? 'is missing' : VAR_KINDS[d.kind] && VAR_KINDS[d.kind](vars[d.key], d);
       if (e) errs.push(d.label + ' ' + e + '.');
+      else if (d.kind === 'vars') {
+        var inner = d.templates && d.templates[vars[d.by]];
+        if (!inner) errs.push(d.label + ': no template for ' + vars[d.by] + '.');
+        else errs = errs.concat(checkVars(inner, vars[d.key]));
+      }
     });
     if (!errs.length && gen.checkVars) errs = errs.concat(gen.checkVars(vars) || []);
     return errs;
@@ -530,6 +538,7 @@
     blockSeed: blockSeed,
     // Question templates (docs/generator-api.md, section 6)
     varKinds: Object.keys(VAR_KINDS),
+    varTemplate: function (d, vars) { return d.kind === 'vars' && d.templates ? d.templates[vars[d.by]] : null; },
     isTemplate: isTemplate,
     varApplies: varApplies,
     checkVars: checkVars,

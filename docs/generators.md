@@ -83,6 +83,8 @@ Example: `examples/recipes/math9-powers-practice-quiz.json` ->
 | `factoring.perfect-square` | $9x^2+24x+16$, $x^2-6x+9$ | square coefficient, largest root, negative middle |
 | `factoring.trinomial` | $x^2-3x-10$, $7x^2+52x+21$, $6x^2+7x-3$ | leading coefficient (1 / prime / several factors), number size, negatives, **methods** (cross method, sum and product; tick both to print both) |
 | `factoring.four-term` | $3x^3+18x^2+8x+48 = (x+6)(3x^2+8)$ | number size, coefficient, negatives |
+| `factoring.full` | $-2x^4+8x^2 = -2x^2(x+2)(x-2)$, $2x^2+20x+50 = 2(x+5)^2$ | what is left (trinomial / difference of squares / perfect square / four terms), common factor size and variable, negative leading term, factor-twice ($x^4-16$), trinomial settings |
+| `factoring.mixed` | Any of the above, shuffled; the key starts with how to recognise the type | question types, trinomial settings |
 
 Parameters show real values and accepted values (`params` on each generator;
 `G.validate(gen, values)` returns friendly messages). Difficulty presets and
