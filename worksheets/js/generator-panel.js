@@ -185,6 +185,25 @@
     (gen.variables || []).forEach(function (d) {
       if (lib().varApplies && !lib().varApplies(d, cur)) return;
       var ctl, redraw;
+      var inner = d.kind === 'vars' && lib().varTemplate ? lib().varTemplate(d, cur) : null;
+      if (inner) {
+        // Another template's vars inside this one (e.g. the bracket left after
+        // taking out a common factor): its own fields, nested.
+        var innerGen;
+        try { innerGen = lib().get(inner); } catch (e) { innerGen = null; }
+        if (innerGen) {
+          row.appendChild(h('div', { class: 'tmpl-nested' },
+            h('span', { class: 'tmpl-nested-label', text: d.label + ':' }),
+            varControls(innerGen, cur[d.key], function (nv) {
+              var next = JSON.parse(JSON.stringify(cur));
+              next[d.key] = nv;
+              var errs = onChange(next) || [];
+              if (!errs.length) cur = next;
+              return errs;
+            })));
+          return;
+        }
+      }
       if (d.kind === 'choice') {
         ctl = h('select');
         (d.values || []).forEach(function (o, n) { ctl.appendChild(h('option', { value: String(n), text: o.label })); });
