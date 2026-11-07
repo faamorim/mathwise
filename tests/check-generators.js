@@ -134,6 +134,58 @@ for (const gen of G.list()) {
   }
 }
 
+// Graphs: every graph a generator gives passes Mathwise.graph.check and samples;
+// for lines, the drawn function is the answer's equation and every key point is on it.
+{
+  const { evaluate } = require('./tex-check');
+  const MG = MW.graph;
+  let graphs = 0;
+  const lineOk = (where, eq, g) => {
+    const fn = g.items.find((i) => i.type === 'function');
+    const f = MG.compile(fn.expr);
+    const rhs = eq.replace(/^y=/, '');
+    for (const x of [-3, -1.5, 0, 0.7, 2, 5]) {
+      if (Math.abs(f(x) - evaluate(rhs, { x })) > 1e-9) fails.push(where + ': graph ' + fn.expr + ' is not ' + eq + ' at x=' + x);
+    }
+    g.items.filter((i) => i.type === 'points').forEach((i) => i.points.forEach((p) => {
+      if (Math.abs(f(p[0]) - p[1]) > 1e-9) fails.push(where + ': point (' + p + ') is not on ' + eq);
+      if (p[0] < g.x.min || p[0] > g.x.max || p[1] < g.y.min || p[1] > g.y.max) fails.push(where + ': point (' + p + ') is off the plane');
+    }));
+  };
+  for (const gen of G.list()) {
+    for (let seed = 0; seed < 150; seed++) {
+      const b = G.fillBlock({ kind: 'question', generator: { name: gen.name, params: {}, seed: 'g' + seed, count: gen.whole ? 1 : 4 } });
+      for (const it of [b].concat(b.parts || [])) {
+        if (!it.graph) continue;
+        graphs++;
+        const errs = MG.check(it.graph);
+        if (errs.length) fails.push(gen.name + ' seed g' + seed + ' graph: ' + errs.join('; '));
+        const student = MG.sample(it.graph), key = MG.sample(it.graph, { key: true });
+        assert.ok(student.lines.concat(student.dots).every((l) => !l.key), gen.name + ' key items hidden from the student');
+        assert.ok(key.lines.length + key.dots.length > 0, gen.name + ' key graph shows something');
+      }
+    }
+  }
+  assert.ok(graphs > 0, 'some generator gives graphs');
+  for (const name of ['linear.graph-line', 'linear.equation-from-graph']) {
+    for (let seed = 0; seed < 300; seed++) {
+      const v = G.pick(name, { slopes: ['integer', 'fraction', 'zero'] }, 'l' + seed);
+      const r = G.render(name, v);
+      lineOk(name + ' seed l' + seed, MW.linear.eqTex(v), r.graph);
+      // Teacher-typed lines: any accepted rise/run/b/size draws correctly.
+      const w = Object.assign({}, v, { rise: (seed % 13) - 6, run: (seed % 5) + 1, b: (seed % 9) - 4, size: 4 + (seed % 7) });
+      if (!G.checkVars(name, w).length) { const rw = G.render(name, w); lineOk(name + ' edited ' + JSON.stringify(w), MW.linear.eqTex(w), rw.graph); assert.strictEqual(MG.check(rw.graph).length, 0); }
+    }
+  }
+  // The expression language reads board notation.
+  const c = (e, x) => MG.compile(e)(x);
+  assert.strictEqual(c('-1/2x+3', 4), 1);
+  assert.strictEqual(c('2(x-1)^2', 3), 8);
+  assert.strictEqual(c('abs(x)-3', -5), 2);
+  assert.ok(MG.check({ x: { min: 0, max: 5 }, y: { min: 0, max: 5 }, items: [{ type: 'function', expr: '2x+' }] })[0].includes('cannot read'));
+  console.log('Graphs OK: ' + graphs + ' generated graphs checked.');
+}
+
 // Friendly messages for vars that do not fit.
 assert.ok(G.checkVars('powers.monomials', { letter: 'x', coefficients: [6, 4], exponents: [2, 1], ops: ['divide'] })[0].includes('whole'));
 assert.ok(G.checkVars('sci.to-scientific', { digits: '370', exponent: 3 })[0].includes('nonzero digit'));

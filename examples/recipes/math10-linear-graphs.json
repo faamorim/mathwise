@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "type": "worksheet",
+  "title": "Math 10 Graphing Lines",
+  "header": { "fields": ["name", "date"], "showGrade": false, "custom": [], "repeat": false },
+  "footer": { "pageNumbers": true },
+  "answers": { "handout": "none", "key": "worked" },
+  "paper": "letter",
+  "seed": "linear-graphs-1",
+  "blocks": [
+    { "kind": "heading", "text": "Graph each line" },
+    { "kind": "question", "generator": { "name": "linear.graph-line", "params": { "slopes": ["integer"], "methods": ["table", "slope-intercept"] }, "count": 2 } },
+    { "kind": "question", "generator": { "name": "linear.graph-line", "params": { "slopes": ["fraction", "zero"], "methods": ["slope-intercept"] }, "count": 2 } },
+    { "kind": "heading", "text": "Equation from the graph" },
+    { "kind": "question", "generator": { "name": "linear.equation-from-graph", "params": {}, "count": 4 } }
+  ]
+}

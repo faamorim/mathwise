@@ -11,6 +11,7 @@ const isStr = (x) => typeof x === 'string' && x.length > 0;
 
 // The public API.
 check(G.apiVersion === 1, 'apiVersion must be 1');
+check(MW.graph && ['check', 'compile', 'sample', 'ticks'].every((f) => typeof MW.graph[f] === 'function'), 'missing Mathwise.graph helpers');
 ['list', 'get', 'defaults', 'validate', 'generate', 'fillBlock', 'fillDocument', 'blockSeed',
   'isTemplate', 'varApplies', 'checkVars', 'pick', 'render', 'placeholders', 'unlink'].forEach((f) =>
   check(typeof G[f] === 'function', 'missing API function ' + f));
@@ -67,6 +68,12 @@ gens.forEach((gen) => {
   check(ans.steps === undefined && (isStr(ans.answer) || (partsOk(ans) && ans.parts.every((p) => p.steps === undefined))), where("output 'answer' must drop steps only"));
   const none = G.generate(n, {}, 'contract', { output: 'none' });
   check(none.answer === undefined && isStr(none.prompt), where("output 'none' must give the prompt only"));
+  // An optional graph follows docs/graph-format.md and stays at every output level
+  // (the student needs the grid; key-only items are marked key: true).
+  if (a.graph !== undefined) {
+    check(MW.graph.check(a.graph).length === 0, where('graph: ' + MW.graph.check(a.graph).join('; ')));
+    check(JSON.stringify(none.graph) === JSON.stringify(a.graph), where("output 'none' must keep the graph"));
+  }
 
   // A stored block fills, keeps its generator field, and follows the seed rule.
   const stored = { kind: 'question', generator: { name: n, params: {}, count: 3 } };
