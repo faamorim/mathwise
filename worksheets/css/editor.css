@@ -225,3 +225,5 @@ input.gen-num { width: 5.5em; }
 .gen-samples li { margin: 2px 0; }
 .gen-sample-ans { color: #b3261e; margin-left: 10px; }
 .gen-sample-ans:before { content: "→ "; color: #888; }
+.gen-more { margin-top: 8px; border-top: 1px dashed #d5dbe5; padding-top: 6px; }
+.gen-more > summary { cursor: pointer; font-size: 13px; color: #2a4f86; margin-bottom: 4px; }
