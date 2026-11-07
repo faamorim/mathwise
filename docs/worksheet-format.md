@@ -106,6 +106,14 @@ Answers stored in blanks go into the answer key, and appear in red when
 "Show answers" is ticked (teacher copy). If a part has an `answer` and its prompt
 has an empty blank, the answer is shown in that blank.
 
+## Typing math
+
+Math is LaTeX between `$…$` (or `$$…$$` on its own line). In the editor, **√ Math** in the
+Insert bar (or Ctrl+M in a text box) opens a visual math editor (MathLive): type `/` for a
+fraction, `^` for a power, `*` for ×, or use its on-screen math keyboard. With the cursor
+inside existing math it edits that math; otherwise it inserts new `$…$`. The file still
+stores plain LaTeX.
+
 ## Generated questions
 
 A question block may carry a `generator` object

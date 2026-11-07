@@ -53,6 +53,7 @@
         <button data-ins="bold" title="Bold **text**"><b>B</b></button>
         <button data-ins="italic" title="Italic *text*"><i>I</i></button>
         <button data-ins="underline" title="Underline __text__"><u>U</u></button>
+        <button data-ins="mathlive" class="ins-mathlive" title="Math editor: type math visually, or edit the math under the cursor (Ctrl+M)">√ Math</button>
         <button data-ins="math" title="Inline math $...$">$x$</button>
         <button data-ins="display" title="Display math on its own line $$...$$">$$</button>
         <button data-ins="frac" title="Fraction">a/b</button>
@@ -78,6 +79,7 @@
               <tr><td><code>[[box-sup]]</code></td><td>small raised box for an exponent</td></tr>
               <tr><td><code>[[line]]</code></td><td>answer line; also <code>[[line-s]]</code>, <code>[[line-l]]</code></td></tr>
               <tr><td><code>\$</code></td><td>a literal dollar sign</td></tr>
+              <tr><td><b>√ Math</b> / Ctrl+M</td><td>visual math editor: inserts <code>$…$</code>, or edits the math under the cursor</td></tr>
             </table>
             <p>Math examples: <code>10^{-3}</code>, <code>\frac{1}{2}</code>, <code>\times</code>, <code>\div</code>,
               <code>\sqrt{x}</code>, <code>\left(\frac{1}{4}\right)^{-2}</code>, <code>\text{cm}^3</code>,
@@ -117,6 +119,7 @@
   <script src="../generators/index.js"></script>
   <script src="js/generated.js"></script>
   <script src="js/generator-panel.js"></script>
+  <script src="js/math-input.js"></script>
   <script src="js/render.js"></script>
   <script src="js/editor.js"></script>
 </body>

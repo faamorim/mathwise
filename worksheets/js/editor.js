@@ -1209,7 +1209,8 @@
       var b = ev.target.closest('button[data-ins]');
       if (!b) return;
       ev.preventDefault(); // keep focus in the text field
-      insertMarkup(b.dataset.ins);
+      if (b.dataset.ins === 'mathlive') { if (WS.mathInput) WS.mathInput.open(state.lastField); }
+      else insertMarkup(b.dataset.ins);
     });
 
     document.addEventListener('keydown', function (ev) {
@@ -1219,6 +1220,10 @@
       if (k === 's') { ev.preventDefault(); save(ev.shiftKey); }
       else if (k === 'o') { ev.preventDefault(); openFile(); }
       else if (k === 'p') { ev.preventDefault(); print(state.view); }
+      else if (k === 'm' && WS.mathInput && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName) &&
+        document.activeElement.closest('#tab-edit')) {
+        ev.preventDefault(); WS.mathInput.open(document.activeElement);
+      }
       else if (k === 'z' && !ev.shiftKey && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) {
         ev.preventDefault(); undo();
       }
