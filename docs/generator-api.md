@@ -87,6 +87,7 @@ kept exactly as given. `fillDocument` does this for every generator block of a d
 own `generator.seed` wins; otherwise `"<doc seed>/<block number>"` (block numbers from 1,
 `mathwise` when the document has no seed). Part *i* of a block uses `"<block seed>:<i>"`.
 Changing any of this changes the numbers of every saved quiz.
+A block with a `template` (section 6) instead of a `generator` is rendered from its vars.
 
 ## 5. Stored form (shared part of the worksheet schema)
 
@@ -97,16 +98,84 @@ Changing any of this changes the numbers of every saved quiz.
 `params` hold real parameter values only (never slider positions, difficulty or aspect
 names), so saved files keep working when presets are retuned. `seed` is optional.
 
+## 6. Question templates: `variables`, `pick`, `render`
+
+Every generator is also a **question template**: generating is split into a random
+part and a fixed part, so a question can be *unlinked* from its seed and edited by hand
+while its answer and steps keep up.
+
+```
+pick(values, rng, ctx) -> vars                      every random choice, as plain JSON
+render(vars)           -> { prompt, answer, steps, slots? }   no randomness at all
+generate               =  render(pick(...))         checked by tests/check-contract.js
+```
+
+`render` must be right for **any** vars that pass `checkVars`, not only for the ones
+`pick` would choose, because a teacher can type their own (checked by
+`tests/check-generators.js`, which nudges every number and re-checks the maths).
+
+**Descriptor field `variables`** (pages build the fields of an unlinked question from it):
+
+```
+{ key, label, kind: 'int', min?, max?, nonzero? }       // whole number
+{ key, label, kind: 'letter' }                          // one letter, like x
+{ key, label, kind: 'int-or-letter' }                   // a base: 7, -5 or p
+{ key, label, kind: 'digits' }                          // significant digits, like "37"
+{ key, label, kind: 'choice', values: [{ value, label }] }
+{ key, label, kind: 'toggle' }                          // true / false
+{ key, label, kind: 'list', of: { kind, ... }, minLength?, maxLength? }
+```
+
+Any variable may have `when: { otherKey: [values] }`: it is used (and shown) only when
+the other variable has one of those values (for example `k` only for the form
+`coefficient`); `varApplies(d, vars)` tells. A page that meets a kind it does not know
+shows the value as JSON text. A new kind is an optional addition (still v1).
+
+**Functions** (pages use these, never `gen.pick` / `gen.render` directly):
+
+| Function | Does |
+| --- | --- |
+| `isTemplate(gen)` | `true` when the generator has `variables`, `pick`, `render`. |
+| `pick(name, values, seed, { index, count })` | The vars a seed chooses (same as `generate` uses). |
+| `checkVars(gen or name, vars)` | Friendly messages ("Each division must come out whole: 6 ÷ 4 does not."); empty when fine. |
+| `render(name, vars, { output, overrides, noThrow })` | One item, exactly like `generate`. Throws with the `checkVars` messages when the vars do not fit (or, with `noThrow`, returns `{ errors }`). |
+| `placeholders(name, vars)` | Names a teacher may type as `%name%` (below). |
+| `unlink(block, { docSeed, blockNumber })` | A generator block turned into a template block with the same questions (keeps part fields like `marks`). |
+
+**Overrides and placeholders.** Text the teacher types over the rendered `prompt`,
+`answer` or `steps` (the whole list) is kept as an override and wins over the rendered
+text. Overrides may use `%name%`, which is replaced by that variable's value (numbers,
+letters, digits, choices) or by a *slot*: a named value the template works out, like
+`%result%` (the final exponent) or `%value%` (bⁿ written out). So a step typed as
+`Add the exponents: %m% + %n% = %result%` stays right when `m` changes. `%%` is a literal
+`%`; an unknown name is left as it is.
+
+**Stored form of an unlinked question** (shared part of the worksheet schema). Each part
+carries its own vars, so moving, deleting or copying a part takes them along:
+
+```json
+{ "kind": "question", "prompt": "Simplify",
+  "template": { "name": "powers.product-quotient", "params": { "bases": ["number"] } },
+  "parts": [
+    { "prompt": "$7^{-8}\\div 7^2 =$", "answer": "$7^{-10}$", "solution": "…", "marks": 1,
+      "template": { "vars": { "base": 7, "m": -8, "op": "divide", "n": 2 },
+                    "overrides": { "steps": ["$= 7^{%m%-%n%}$", "$= 7^{%result%}$"] } } } ] }
+```
+
+- `block.template.params`: the generator settings when it was unlinked, so a page can
+  `pick(name, params, newSeed)` one more part like these.
+- A part without `template` is a hand-made part in the same block and is left alone.
+- A `whole` template has `vars` (and `overrides`) on `block.template` itself, no parts.
+- The block has no `generator` and no seed. `fillBlock` re-renders every part that has
+  `template` and keeps the fields it does not own (`marks`, `space`, `label`, …); it does
+  the same for a generator block's parts. The filled text stays on the block, so a page
+  that does not know templates still shows it as a hand-made question.
+- `render(name, vars, { noThrow: true })` returns `{ errors: [...] }` instead of throwing.
+
 ## Planned (not built yet, agreed 2026-11-07)
 
 These will be added to this contract when they are built:
 
-- **Question templates (v2).** Each generator splits into `variables` (name, kind,
-  label), `pick(values, rng)` → variables, and `render(variables)` → `{ prompt, answer,
-  steps }`, with `generate = render(pick(…))`, checked by the contract test. The editor can
-  then *unlink* a generated question: it keeps the template name and its variables but no
-  seed (`template: { name, vars, overrides }`); the teacher edits a value, a function or a
-  letter and the answer and steps re-render; text typed over by hand stays.
 - **Difficulty presets:** `presets` on the heat scale (mild, medium, spicy, extra spicy),
   each a set of parameter values; aspects and `sliceOrder` for thin slicing.
 - **Graphs:** an optional `graph` object on items, in the format of a shared

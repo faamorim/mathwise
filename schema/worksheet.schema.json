@@ -56,6 +56,22 @@
   },
   "$defs": {
     "markup": { "type": "string" },
+    "templateVars": { "type": "object", "description": "A template's variables (see its `variables`)." },
+    "templateOverrides": {
+      "type": "object",
+      "description": "Text typed over by hand; wins over the rendered text. May use %name% placeholders.",
+      "properties": {
+        "prompt": { "type": "string" },
+        "answer": { "type": "string" },
+        "steps": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "partTemplate": {
+      "type": "object",
+      "description": "This part of an unlinked question: its variables and hand-typed overrides.",
+      "required": ["vars"],
+      "properties": { "vars": { "$ref": "#/$defs/templateVars" }, "overrides": { "$ref": "#/$defs/templateOverrides" } }
+    },
     "space": { "type": "number", "minimum": 0, "description": "Work space in lines (1 line is about 8 mm)." },
     "block": {
       "type": "object",
@@ -72,6 +88,17 @@
             "params": { "type": "object", "description": "Real parameter values only; missing ones use the generator's defaults." },
             "seed": { "type": ["number", "string"], "description": "Optional; without it the block uses \"<document seed>/<block number>\"." },
             "count": { "type": "integer", "minimum": 1, "description": "How many parts (default 4)." }
+          }
+        },
+        "template": {
+          "type": "object",
+          "description": "An unlinked generated question: rendered from values instead of a seed, so editing a value updates the answer and steps. Each part carries its own template { vars, overrides? }; a whole-question template has vars on the block. Shared with the generator library: see docs/generator-api.md, section 6.",
+          "required": ["name"],
+          "properties": {
+            "name": { "type": "string", "description": "Generator (template) name, e.g. powers.monomials." },
+            "params": { "type": "object", "description": "Generator settings at unlink time (to pick more parts like these)." },
+            "vars": { "$ref": "#/$defs/templateVars" },
+            "overrides": { "$ref": "#/$defs/templateOverrides" }
           }
         }
       },
@@ -121,7 +148,8 @@
               "answer": { "$ref": "#/$defs/markup" },
               "solution": { "$ref": "#/$defs/markup", "description": "Worked solution for the teacher key." },
               "marks": { "type": "number", "minimum": 0 },
-              "space": { "$ref": "#/$defs/space" }
+              "space": { "$ref": "#/$defs/space" },
+              "template": { "$ref": "#/$defs/partTemplate" }
             }
           }
         },

@@ -42,11 +42,19 @@
       { key: 'digits', label: 'Most significant digits', type: 'number', min: 1, max: 5, default: 2 },
       { key: 'maxExponent', label: 'Largest exponent (size)', type: 'number', min: 2, max: 12, default: 8 }
     ],
-    generate: function (v, rng, ctx) {
+    variables: [
+      { key: 'digits', label: 'Significant digits', kind: 'digits' },
+      { key: 'exponent', label: 'Power of ten', kind: 'int', min: -20, max: 20, nonzero: true }
+    ],
+    pick: function (v, rng, ctx) {
       var size = ctx.spread('sizes', rng);
       var s = digits(rng, rng.int(1, v.digits));
       var e = size === 'large' ? rng.int(2, v.maxExponent) : -rng.int(2, v.maxExponent);
-      return { prompt: '$' + standard(s, e) + ' =$', steps: [moves(e)], answer: '$' + sci(s, e) + '$' };
+      return { digits: s, exponent: e };
+    },
+    render: function (x) {
+      var s = x.digits, e = x.exponent;
+      return { prompt: '$' + standard(s, e) + ' =$', steps: [moves(e)], answer: '$' + sci(s, e) + '$', slots: { places: Math.abs(e) } };
     }
   });
 
@@ -63,18 +71,28 @@
       { key: 'digits', label: 'Significant digits', type: 'number', min: 2, max: 4, default: 3 },
       { key: 'maxExponent', label: 'Largest exponent (size)', type: 'number', min: 2, max: 15, default: 12 }
     ],
-    generate: function (v, rng, ctx) {
+    variables: [
+      { key: 'digits', label: 'Significant digits', kind: 'digits' },
+      { key: 'shift', label: 'Places the coefficient is off (+ too big, − too small)', kind: 'int', min: -6, max: 6, nonzero: true },
+      { key: 'exponent', label: 'Power of ten as written', kind: 'int', min: -30, max: 30 }
+    ],
+    pick: function (v, rng, ctx) {
       var kind = ctx.spread('shifts', rng);
       var s = digits(rng, rng.int(2, v.digits));
       var sh = kind === 'too-big' ? rng.int(1, 2) : -rng.int(1, 3);
       var k = rng.intWhere(-v.maxExponent, v.maxExponent, function (k) { return k !== 0 && k + sh !== 0; });
+      return { digits: s, shift: sh, exponent: k };
+    },
+    render: function (x) {
+      var s = x.digits, sh = x.shift, k = x.exponent;
       return {
         prompt: '$' + standard(s, sh) + '\\times' + pow(10, k) + ' =$',
         steps: [
           '$= ' + mantissa(s) + '\\times' + pow(10, sh) + '\\times' + pow(10, k) + '$',
           '$= ' + mantissa(s) + '\\times' + pow(10, M.opExp(sh, '+', k)) + '$'
         ],
-        answer: '$' + sci(s, sh + k) + '$'
+        answer: '$' + sci(s, sh + k) + '$',
+        slots: { result: sh + k }
       };
     }
   });
@@ -92,10 +110,18 @@
       { key: 'digits', label: 'Significant digits', type: 'number', min: 1, max: 5, default: 4 },
       { key: 'maxExponent', label: 'Largest exponent (size)', type: 'number', min: 1, max: 12, default: 9 }
     ],
-    generate: function (v, rng, ctx) {
+    variables: [
+      { key: 'digits', label: 'Significant digits', kind: 'digits' },
+      { key: 'exponent', label: 'n', kind: 'int', min: -20, max: 20, nonzero: true }
+    ],
+    pick: function (v, rng, ctx) {
       var size = ctx.spread('sizes', rng);
       var s = digits(rng, rng.int(Math.min(2, v.digits), v.digits));
       var e = size === 'large' ? rng.int(1, v.maxExponent) : -rng.int(1, v.maxExponent);
+      return { digits: s, exponent: e };
+    },
+    render: function (x) {
+      var s = x.digits, e = x.exponent;
       return { prompt: '$' + standard(s, e) + ' = ' + mantissa(s) + '\\times10^n$', steps: [moves(e)], answer: '$n=' + e + '$' };
     }
   });

@@ -83,12 +83,32 @@ Parameters show real values and accepted values (`params` on each generator;
 `G.validate(gen, values)` returns friendly messages). Difficulty presets and
 aspect bands (see the generator design doc) are the next layer on top.
 
+## Writing a generator (template form)
+
+Every generator is a question template (contract section 6):
+
+- `pick(values, rng, ctx)` makes **every** random choice and returns them as plain JSON
+  vars (`{ base: 7, m: -8, op: 'divide', n: 2 }`). Use `ctx.spread(key, rng)` for a
+  `set` parameter. Keep the order of `rng` calls when you change a generator, or saved
+  quizzes get new numbers.
+- `render(vars)` writes `prompt`, `answer`, `steps` (and optional `slots`, named values
+  for `%name%` placeholders). No `rng` here. It must be right for any vars that pass
+  `checkVars`, so handle the cases `pick` avoids (an exponent of 0 or 1, a divisor that
+  is not a factor) or reject them in `checkVars` with a friendly message.
+- `variables` describes each var (kind, label, limits, `when`), so a page can show it.
+
+`register()` builds `generate` as `render(pick(...))`.
+`node tools/generate.js recipe.json out.json --unlink` writes the unlinked form.
+
 ## Checks
 
 `node tests/check-contract.js` checks every generator against the Generator API v1
-(descriptor fields, parameter types, output shape, seed rule).
+(descriptor fields, parameter types, output shape, seed rule, and the template rules:
+variable kinds, `render(pick()) = generate`, unlink gives the same questions, overrides
+and placeholders).
 
 `node tests/check-generators.js` runs every generator for many seeds: deterministic,
 valid KaTeX, and every worked step and answer checked numerically against the
 prompt (equations are checked by substituting the answer). The example quizzes get
-the same numeric check.
+the same numeric check. It also nudges every number of picked vars, as a teacher
+editing an unlinked question would, and checks each accepted edit the same way.
