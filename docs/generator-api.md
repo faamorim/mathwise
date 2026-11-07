@@ -76,6 +76,9 @@ Returns one item:
   also carries `[{ method, label, steps }]`, one entry per method the settings ask for;
   `steps` is then all of them, each after a "Label:" line, ready to print. A practice
   page can offer the student the choice. Pages that do not know it print `steps`.
+- Optional `followUps`: thinking follow-ups `[{ prompt, answer }]` (reasoning questions,
+  `answer` = possible answers). They are already appended to `prompt` and `answer` as
+  "*Think:* …" / "*Possible answers:* …" paragraphs, so pages need not handle them.
 - Items may later carry extra optional fields (see *Planned*); pages ignore what they
   do not know.
 
@@ -192,5 +195,4 @@ These will be added to this contract when they are built:
   `docs/graph-format.md`. Generators only describe graphs; pages draw them.
 - **Practice:** optional `check(item, studentAnswer)` and per-step `hints`, and a
   `method` setting for guided steps (e.g. cross method for factoring).
-- **Written-question data:** real data sets with sources in `generators/data/` for word
-  problems built on templates.
+

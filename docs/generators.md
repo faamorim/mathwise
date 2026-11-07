@@ -85,6 +85,10 @@ Example: `examples/recipes/math9-powers-practice-quiz.json` ->
 | `factoring.four-term` | $3x^3+18x^2+8x+48 = (x+6)(3x^2+8)$ | number size, coefficient, negatives |
 | `factoring.full` | $-2x^4+8x^2 = -2x^2(x+2)(x-2)$, $2x^2+20x+50 = 2(x+5)^2$ | what is left (trinomial / difference of squares / perfect square / four terms), common factor size and variable, negative leading term, factor-twice ($x^4-16$), trinomial settings |
 | `factoring.mixed` | Any of the above, shuffled; the key starts with how to recognise the type | question types, trinomial settings |
+| `sci.planet-distance` | Mean distance from the Sun to a planet, standard form ↔ scientific notation (NASA data) | direction, thinking follow-up |
+| `sci.planet-ratio` | How many times farther from the Sun is Neptune than Earth? | thinking follow-up |
+| `sci.light-time` | How long does sunlight take to reach Mars? (seconds and minutes) | thinking follow-up |
+| `rates.per-hour` | "Bobby takes 2 minutes to swim 3 laps. How many laps in one hour?" (scenario library) | scenarios, thinking follow-up |
 
 Parameters show real values and accepted values (`params` on each generator;
 `G.validate(gen, values)` returns friendly messages). Difficulty presets and
@@ -95,6 +99,17 @@ trinomial `methods` setting only changes the worked steps, never the numbers; wi
 both methods ticked the key shows each one under its own heading, and the item
 carries them separately in `methods` (contract section 3). Example recipe:
 `examples/recipes/math10-factoring-practice.json`.
+
+## Written questions and the data library
+
+`generators/data/` holds facts and hand-written content, separate from the code:
+`planets.js` (NASA Planetary Fact Sheet distances, with the source) and
+`rate-scenarios.js` (rate stories with %placeholders% and their thinking follow-ups).
+To add a scenario or a follow-up, edit the data file only; the generator picks it up.
+
+**Thinking follow-ups** ask students to reason rather than compute ("Give a reason why
+Bobby's rate could change"). Each has *possible answers* for the key. The setting
+*Thinking follow-up* is none / one / all; it never changes the numbers.
 
 ## Writing a generator (template form)
 

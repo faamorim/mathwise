@@ -188,6 +188,7 @@
       out.steps = r.steps || [];
       if (r.methods) out.methods = r.methods;
     }
+    if (r.followUps && output !== 'none') out.followUps = r.followUps;
     return out;
   }
 
@@ -310,6 +311,7 @@
       out.steps = ov.steps != null ? ov.steps.map(f) : (r.steps || []);
       if (r.methods && ov.steps == null) out.methods = r.methods;
     }
+    if (r.followUps && output !== 'none' && ov.prompt == null) out.followUps = r.followUps;
     return out;
   }
 

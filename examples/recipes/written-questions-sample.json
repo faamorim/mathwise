@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "type": "worksheet",
+  "title": "Written Questions Sample",
+  "header": { "fields": ["name", "date"], "showGrade": false, "custom": [], "repeat": false },
+  "footer": { "pageNumbers": true },
+  "answers": { "handout": "none", "key": "worked" },
+  "paper": "letter",
+  "seed": "written-1",
+  "blocks": [
+    { "kind": "heading", "text": "Rates" },
+    { "kind": "question", "generator": { "name": "rates.per-hour", "params": {}, "count": 3 } },
+    { "kind": "heading", "text": "Our solar system" },
+    { "kind": "question", "generator": { "name": "sci.planet-distance", "params": {}, "count": 2 } },
+    { "kind": "question", "generator": { "name": "sci.planet-ratio", "params": {}, "count": 1 } },
+    { "kind": "question", "generator": { "name": "sci.light-time", "params": { "thinking": "all" }, "count": 1 } }
+  ]
+}
