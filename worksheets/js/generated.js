@@ -209,6 +209,7 @@
       // A story question: the story is the prompt, the questions are its parts.
       delete target.answer; delete target.solution;
       if (r.graph) target.graph = r.graph; else delete target.graph;
+      if (r.choices) target.choices = r.choices; else delete target.choices;
       target.parts = keepPartFields(target.parts, r.parts.map(function (p) {
         var it = { prompt: p.prompt, answer: p.answer };
         if (p.steps && p.steps.length) it.solution = p.steps.join('\n');
@@ -221,10 +222,11 @@
     target.answer = r.answer;
     if (r.steps && r.steps.length) target.solution = r.steps.join('\n'); else delete target.solution;
     if (r.graph) target.graph = r.graph; else delete target.graph;
+    if (r.choices) target.choices = r.choices; else delete target.choices;
   }
 
   // New generated parts keep the teacher's layout fields of the old part at the same place.
-  var GENERATED_FIELDS = ['prompt', 'answer', 'solution', 'template', 'thinking', 'graph'];
+  var GENERATED_FIELDS = ['prompt', 'answer', 'solution', 'template', 'thinking', 'graph', 'choices'];
   function keepPartFields(oldParts, newParts) {
     (oldParts || []).forEach(function (o, i) {
       var n = newParts[i];
