@@ -174,6 +174,7 @@
     var wrap = document.createElement('div');
     wrap.className = 'ws-graph' + (opts.key && hasKeyItems(g) ? ' has-key' : '');
     var scale = opts.scale || 1;
+    if (opts.maxWidth) scale = Math.min(scale, opts.maxWidth / TW);   // fit a card or column (mm)
     wrap.style.width = r2(TW * scale) + 'mm';
     if (scale < 1) wrap.style.fontSize = Math.round(scale * 110) + '%';
     wrap.appendChild(svg);

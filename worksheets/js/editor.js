@@ -859,6 +859,62 @@
 
     // Graph (generated questions draw their own)
     if (!generated) body.appendChild(graphBox(q, 'graph', 'this ' + (isQ ? 'question' : 'example')));
+
+    // Matching cards A, B, C... (generated matching questions make their own)
+    if (!generated) body.appendChild(choicesBox(q));
+  }
+
+  function choicesBox(q) {
+    var box = h('div', { class: 'sub choices-box' });
+    if (!Array.isArray(q.choices) || !q.choices.length) {
+      box.appendChild(h('button', { class: 'btn small', text: '+ Add matching cards (A, B, C…)', title: 'Cards to match the parts to: text, equations or graphs', onclick: function () {
+        snapshot();
+        q.choices = [{ text: '' }, { text: '' }, { text: '' }, { text: '' }];
+        if (!q.parts || !q.parts.length) q.parts = [{ prompt: '' }, { prompt: '' }, { prompt: '' }, { prompt: '' }];
+        if (!q.prompt) q.prompt = 'Match each one to a card. Write the letter.';
+        changed(true);
+      } }));
+      return box;
+    }
+    box.appendChild(h('div', { class: 'row' },
+      h('span', { class: 'sub-title', text: 'Matching cards' }),
+      field('Cards per row', selectInput(q, 'choiceColumns', [['', 'auto'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], { number: true, def: '' })),
+      h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Cut-out cards', function () { return !!q.cut; },
+        function (v) { if (v) q.cut = true; else delete q.cut; }, 'Dashed cut lines around the cards and the parts, for card sorts')),
+      h('span', { class: 'hint', text: 'Put the right letter in each part\'s Answer.' }),
+      h('button', { class: 'btn small danger', text: 'Remove cards', onclick: function () {
+        snapshot(); delete q.choices; delete q.cut; delete q.choiceColumns; changed(true);
+      } })));
+    q.choices.forEach(function (c, n) {
+      var letter = c.label || String.fromCharCode(65 + n);
+      var row = h('div', { class: 'choice-row' },
+        h('span', { class: 'lbl', text: letter }),
+        textInput(c, 'text', { placeholder: 'text or $y=2x+1$ (optional with a graph)', emptyDeletes: true }),
+        h('button', { class: 'btn icon' + (c.graph ? ' on' : ''), text: '📈', title: 'A graph on this card', onclick: function () {
+          snapshot();
+          if (!c.graph) { c.graph = newGraph(); c.graph.size = [5, 5]; }
+          state.openGraphs.add(c);
+          changed(true);
+        } }),
+        h('button', { class: 'btn icon danger', title: 'Remove card', text: '✕', onclick: function () {
+          snapshot(); q.choices.splice(n, 1); if (!q.choices.length) delete q.choices; changed(true);
+        } }));
+      box.appendChild(row);
+      if (c.graph) {
+        // Folded: four full graph editors make a very long card.
+        var sum = (c.graph.items || []).map(function (it) {
+          return it.type === 'function' ? 'y = ' + (it.expr || '') : it.type === 'points' ? (it.points || []).length + ' points' : it.type;
+        }).join(', ') || 'empty grid';
+        box.appendChild(h('details', { class: 'part-graph', open: state.openGraphs.has(c),
+          ontoggle: function (ev) { if (ev.target.open) state.openGraphs.add(c); else state.openGraphs.delete(c); } },
+          h('summary', { text: 'Graph on card ' + letter + ': ' + sum }),
+          graphBox(c, 'graph', 'card ' + letter)));
+      }
+    });
+    box.appendChild(h('button', { class: 'btn small', text: '+ Card', onclick: function () {
+      snapshot(); q.choices.push({ text: '' }); changed(true);
+    } }));
+    return box;
   }
 
   // ---------- graphs (docs/graph-format.md; drawn by js/graph-draw.js) ----------

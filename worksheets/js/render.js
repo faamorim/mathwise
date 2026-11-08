@@ -135,6 +135,45 @@
     return [textEl, ge];
   }
 
+  // Matching cards A, B, C... under the prompt (`choices`), one element per row.
+  function choiceLetter(i, c) { return (c && c.label) || String.fromCharCode(65 + i); }
+  function choiceRows(q, opts, paper) {
+    var list = Array.isArray(q.choices) ? q.choices : [];
+    if (!list.length) return [];
+    var cut = !!q.cut;
+    var cols = Math.max(1, Math.min(4, +q.choiceColumns || (cut ? 3 : 4), list.length));
+    var avail = (paper === "a4" ? 166 : 171) - (cut ? 4 : 2) * cols;
+    // Which parts go with each card (shown in the key).
+    var matched = list.map(function () { return []; });
+    if (opts.showAnswers && q.parts) q.parts.forEach(function (p, j) {
+      String(p.answer || '').split(/[\s,;]+/).forEach(function (a) {
+        list.forEach(function (c, i) { if (a && a.toUpperCase() === choiceLetter(i, c).toUpperCase()) matched[i].push(WS.model.partLabel(j, p)); });
+      });
+    });
+    var rows = [];
+    for (var i = 0; i < list.length; i += cols) {
+      var row = el('div', 'choices' + (cut ? ' cut' : ''));
+      row.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+      for (var j = i; j < i + cols; j++) {
+        var c = list[j];
+        if (!c) { row.appendChild(el('div', 'choice-card empty')); continue; }
+        var card = el('div', 'choice-card');
+        var top = el('div', 'choice-head');
+        top.appendChild(el('span', 'choice-label', M.escapeHtml(choiceLetter(j, c))));
+        if (c.text) top.appendChild(el('div', 'choice-text', M.html(c.text)));
+        card.appendChild(top);
+        if (c.graph && WS.graph) {
+          var ge = WS.graph.el(c.graph, { key: !!opts.showAnswers, maxWidth: avail / cols - 6 });
+          if (ge) card.appendChild(ge);
+        }
+        if (matched[j].length) card.appendChild(el('div', 'choice-key', '= ' + M.escapeHtml(matched[j].join(', '))));
+        row.appendChild(card);
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
   function noTrailingEquals(src) {
     src = String(src == null ? '' : src);
     if (src.indexOf('[[') >= 0) return src;
@@ -166,7 +205,9 @@
     }
     withGraph(prompt, q.graph, opts).forEach(function (e) { body.appendChild(e); });
     head.appendChild(body);
+    var choices = choiceRows(q, opts, doc.paper);
     if (!parts && !q.table) {
+      choices.forEach(function (r) { body.appendChild(r); });
       var sp = doc.compact ? 0 : q.space != null ? q.space : defaultSpace;   // compact: work goes on separate paper
       var ans = opts.showAnswers && qFill.answer ? M.inline(q.answer) : '';
       if (sp > 0 || ans || opts.nudge) body.appendChild(spaceEl(sp, ans, null, !!q.lined));
@@ -174,6 +215,7 @@
       return out;
     }
     out.push(frag(head, index, true));
+    choices.forEach(function (r) { out.push(frag(r, index, true)); });
 
     if (parts) {
       var cols = Math.min(4, Math.max(1, +q.columns || 1));
@@ -184,9 +226,10 @@
         var longest = Math.max.apply(null, q.parts.map(function (pp) { return printedLength(noTrailingEquals(pp.prompt)); }));
         cols = Math.max(cols, longest <= 12 ? 4 : longest <= 18 ? 3 : cols);
       }
-      var partSpace = q.space != null ? q.space : (boxed ? 2 : 1);
+      var partSpace = q.space != null ? q.space : choices.length ? 0 : (boxed ? 2 : 1);
+      var cutParts = !!q.cut && choices.length > 0;
       for (var i = 0; i < q.parts.length; i += cols) {
-        var row = el('div', 'parts-row cols-' + cols + (boxed ? ' boxed' : ' plain') + (i > 0 ? ' cont' : ''));
+        var row = el('div', 'parts-row cols-' + cols + (cutParts ? ' cut' : boxed ? ' boxed' : ' plain') + (i > 0 ? ' cont' : ''));
         row.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
         for (var j = i; j < i + cols; j++) {
           var cell = el('div', 'part');
@@ -196,6 +239,10 @@
             line.appendChild(el('span', 'p-label', M.escapeHtml(WS.model.partLabel(j, p))));
             var pFill = { answer: p.answer || '' };
             line.appendChild(el('span', 'p-prompt', M.inline(compact ? noTrailingEquals(p.prompt) : p.prompt, withFill(opts, pFill))));
+            if (choices.length) {
+              // Matching: a box for the card's letter.
+              line.appendChild(el('span', 'match-blank', opts.showAnswers && p.answer ? M.inline(p.answer) : ''));
+            }
             withGraph(line, p.graph, opts).forEach(function (e) { cell.appendChild(e); });
             // An open-ended (thinking) part gets at least 3 lines unless set by hand.
             var ps = doc.compact ? 0 : p.space != null ? p.space : (p.thinking ? Math.max(partSpace, 3) : partSpace);
@@ -329,6 +376,7 @@
       var head = el('div', 'wk-q block-start');
       head.appendChild(el('span', 'q-label', M.escapeHtml(q.label)));
       var qb = el('div', 'q-body', M.html(q.prompt || ''));
+      choiceRows(doc.blocks[q.blockIndex] || {}, { showAnswers: true }, doc.paper).forEach(function (r) { qb.appendChild(r); });
       if (q.graph && WS.graph && WS.graph.hasKeyItems(q.graph)) {
         var qg = WS.graph.el(q.graph, { key: true });
         if (qg) qb.appendChild(qg);

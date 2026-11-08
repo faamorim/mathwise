@@ -86,6 +86,11 @@ this page explains it with examples. Full examples live in [`examples/`](../exam
   teacher key, graphs with answers on them are drawn under the worked solution, and as small
   copies under the line on the answers page. In the editor, *+ Add a graph* (or 📈 on a part)
   edits the axes, lines and curves (`y =` …), and points (`A(2, 5)`, optionally joined).
+* **Matching cards**: `choices` puts cards A, B, C… under the prompt, each with `text`
+  and/or a `graph` (four to a row, or `choiceColumns`). Each part gets a short blank for a
+  letter and its `answer` is the right letter (extra cards are distractors). The key writes
+  the letters in the blanks and "= b)" under each card. `"cut": true` draws dashed cut-out
+  cards (cards and parts) for a card sort. In the editor: *+ Add matching cards*.
 
 ### Tables
 

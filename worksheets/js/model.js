@@ -123,6 +123,7 @@
       if (b.parts != null && !Array.isArray(b.parts)) b.parts = null;
       if (b.parts) b.parts.forEach(function (p) { if (typeof p.prompt !== 'string') p.prompt = ''; });
       if (b.table) normalizeTable(b.table);
+      if (b.choices != null && !Array.isArray(b.choices)) delete b.choices;
     }
     if (b.kind === 'table') normalizeTable(b);
     if (b.kind === 'text' && typeof b.content !== 'string') b.content = '';
