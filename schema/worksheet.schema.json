@@ -91,6 +91,19 @@
       "properties": { "vars": { "$ref": "#/$defs/templateVars" }, "overrides": { "$ref": "#/$defs/templateOverrides" } }
     },
     "space": { "type": "number", "minimum": 0, "description": "Work space in lines (1 line is about 8 mm)." },
+    "graph": {
+      "type": "object",
+      "required": ["x", "y"],
+      "description": "A Cartesian plane and what is drawn on it, shown with the question or part. Shared format: see docs/graph-format.md (items marked key: true only appear in the teacher key).",
+      "properties": {
+        "size": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "minItems": 2, "maxItems": 2 },
+        "x": { "type": "object", "required": ["min", "max"] },
+        "y": { "type": "object", "required": ["min", "max"] },
+        "place": { "enum": ["below", "right", "left"] },
+        "key": { "type": "boolean" },
+        "items": { "type": "array", "items": { "type": "object", "required": ["type"] } }
+      }
+    },
     "block": {
       "type": "object",
       "required": ["kind"],
@@ -170,11 +183,13 @@
               "marks": { "type": "number", "minimum": 0 },
               "space": { "$ref": "#/$defs/space" },
               "lined": { "type": "boolean", "description": "Ruled lines for this part (overrides the question's lined)." },
-              "template": { "$ref": "#/$defs/partTemplate" }
+              "template": { "$ref": "#/$defs/partTemplate" },
+              "graph": { "$ref": "#/$defs/graph" }
             }
           }
         },
-        "table": { "$ref": "#/$defs/tableData" }
+        "table": { "$ref": "#/$defs/tableData" },
+        "graph": { "$ref": "#/$defs/graph" }
       }
     },
     "table": { "$ref": "#/$defs/tableData" },

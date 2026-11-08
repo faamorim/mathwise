@@ -210,6 +210,11 @@
     return inl.length ? inl.join(', ') : '';
   }
 
+  // A graph with something only the key shows (docs/graph-format.md).
+  function keyGraph(g) {
+    return !!(g && typeof g === 'object' && (g.key || (g.items || []).some(function (it) { return it && it.key; })));
+  }
+
   // [{label: "1)", items: [{label: "a)", answer: "..."}]}]
   function answerKey(doc) {
     var labs = labels(doc);
@@ -219,11 +224,11 @@
       var items = [];
       var own = answerOf(b);
       var sol = function (x) { return x.solution && String(x.solution).trim() ? String(x.solution) : ''; };
-      if (own || sol(b)) items.push({ label: '', answer: own, solution: sol(b), prompt: '' });
+      if (own || sol(b) || (!hasParts(b) && keyGraph(b.graph))) items.push({ label: '', answer: own, solution: sol(b), prompt: '', graph: hasParts(b) ? null : b.graph });
       if (hasParts(b)) {
         b.parts.forEach(function (p, pi) {
           var a = answerOf(p);
-          if (a || sol(p)) items.push({ label: partLabel(pi, p), answer: a, solution: sol(p), prompt: p.prompt });
+          if (a || sol(p) || keyGraph(p.graph)) items.push({ label: partLabel(pi, p), answer: a, solution: sol(p), prompt: p.prompt, graph: p.graph });
         });
       }
       if (b.table) {
@@ -239,7 +244,8 @@
           });
         });
       }
-      if (items.length) out.push({ label: labs[i] || '•', blockIndex: i, prompt: b.prompt, items: items });
+      var qGraph = hasParts(b) && keyGraph(b.graph) ? b.graph : null;
+      if (items.length || qGraph) out.push({ label: labs[i] || '•', blockIndex: i, prompt: b.prompt, items: items, graph: qGraph });
     });
     return out;
   }

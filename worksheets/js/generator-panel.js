@@ -154,6 +154,9 @@
           return /^[A-Za-z]$/.test(s) ? { v: s } : { err: (d.label || 'This') + ' must be a whole number or one letter.' };
         case 'letter': return /^[A-Za-z]$/.test(s) ? { v: s } : { err: d.label + ' must be one letter.' };
         case 'digits': return /^\d+$/.test(s) ? { v: s } : { err: d.label + ' must be digits only, like 37.' };
+        case 'text':
+          if (s === '') return { err: (d.label || 'This') + ' is empty.' };
+          return d.maxLength && s.length > d.maxLength ? { err: (d.label || 'This') + ' is longer than ' + d.maxLength + ' characters.' } : { v: s };
         case 'choice': {
           var o = (d.values || []).filter(function (x) { return String(x.value) === s || x.label === s; })[0];
           return o ? { v: o.value } : { err: (d.label || 'This') + ': choose one of ' + (d.values || []).map(function (x) { return x.label; }).join(', ') + '.' };
@@ -212,6 +215,37 @@
           ctl.value = String(Math.max(0, n));
         };
         ctl.addEventListener('change', function () { tryChange(d.key, d.values[+ctl.value].value, redraw); });
+      } else if (d.kind === 'list' && d.of && d.of.kind === 'text') {
+        // Text entries may hold commas, so one box per entry.
+        ctl = h('div', { class: 'tmpl-list' });
+        redraw = function () {
+          ctl.innerHTML = '';
+          var list = (cur[d.key] || []).slice();
+          list.forEach(function (x, n) {
+            var inp = h('input', { type: 'text', class: 'mono tmpl-var wide', title: (d.label || '') + ' ' + (n + 1) });
+            inp.value = x;
+            if (d.of.maxLength) inp.maxLength = d.of.maxLength;
+            inp.addEventListener('change', function () {
+              var r = parse(Object.assign({ label: (d.label || 'Entry') + ' ' + (n + 1) }, d.of), inp.value);
+              if (r.err) { msg.textContent = r.err; msg.hidden = false; redraw(); return; }
+              var next = list.slice(); next[n] = r.v;
+              tryChange(d.key, next, redraw);
+            });
+            var del = h('button', { type: 'button', class: 'btn small', title: 'Remove', text: '×' });
+            del.disabled = list.length <= 1;
+            del.addEventListener('click', function () {
+              var next = list.slice(); next.splice(n, 1);
+              tryChange(d.key, next, redraw); redraw();
+            });
+            ctl.appendChild(h('div', { class: 'tmpl-list-row' }, inp, del));
+          });
+          var add = h('button', { type: 'button', class: 'btn small', text: '+ Add' });
+          add.addEventListener('click', function () {
+            var next = list.concat([list.length ? list[list.length - 1] : 'x']);
+            tryChange(d.key, next, redraw); redraw();
+          });
+          ctl.appendChild(add);
+        };
       } else if (d.kind === 'toggle') {
         var c = h('input', { type: 'checkbox' });
         ctl = h('label', { class: 'check' }, c, 'Yes');

@@ -216,3 +216,33 @@
 .pages.compact .frag.block-start { margin-top: 0.09in; }
 .pages.compact .q-prompt p:last-child { margin-bottom: 0.12em; }
 .pages.compact .parts-row.plain .part { padding: 0.08em 0.6em 0.08em 0.2em; }
+
+/* Graphs (js/graph-draw.js): drawn at print size, shrink to fit a narrow column. */
+.ws-graph { position: relative; max-width: 100%; margin: 0.15em 0 0.3em; line-height: 1.2;
+  break-inside: avoid; page-break-inside: avoid; --key-ink: #1f5fbf; }
+.ws-graph-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ws-graph .g-grid line { stroke: #b9b9b9; stroke-width: 0.15; }
+.ws-graph .g-axes line, .ws-graph .g-tick { stroke: var(--ink); stroke-width: 0.3; }
+.ws-graph .g-arrow { fill: var(--ink); }
+.ws-graph .g-gap { fill: #fff; }
+.ws-graph .g-break { fill: none; stroke: var(--ink); stroke-width: 0.3; }
+.ws-graph .g-nums { fill: var(--ink); font-family: inherit; }
+.ws-graph .g-line { fill: none; stroke: var(--ink); stroke-width: 0.5; stroke-linejoin: round; stroke-linecap: round; }
+.ws-graph .g-line.dashed { stroke-dasharray: 1.6 1.1; }
+.ws-graph .g-head { fill: var(--ink); }
+.ws-graph .g-dot { fill: var(--ink); stroke: var(--ink); stroke-width: 0.35; }
+.ws-graph .g-dot.open { fill: #fff; }
+.ws-graph .key.g-line { stroke: var(--key-ink); }
+.ws-graph .key.g-head, .ws-graph .key.g-dot { fill: var(--key-ink); stroke: var(--key-ink); }
+.ws-graph .key.g-dot.open { fill: #fff; }
+.ws-graph .g-label { position: absolute; white-space: nowrap; font-size: 0.85em; }
+.ws-graph .g-line-label, .ws-graph .g-text { background: rgba(255, 255, 255, 0.85); padding: 0 0.15em; }
+.ws-graph .g-label.key { color: var(--key-ink); }
+.ws-graph .g-title { font-weight: 600; }
+.ws-graph .g-axis-label { font-style: italic; }
+.ws-graph-error { color: #b00020; font-size: 0.85em; margin: 0.2em 0; }
+.q-graph-row { display: flex; gap: 0.8em; align-items: flex-start; }
+.q-graph-row > .q-graph-text { flex: 1 1 auto; min-width: 0; }
+.q-graph-row > .ws-graph { flex: none; }
+.ak-graphs { display: flex; flex-wrap: wrap; gap: 0.4em 1.2em; margin: -0.2em 0 0.6em 1.6em; }
+.ak-graph { display: flex; gap: 0.3em; align-items: flex-start; }
