@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "type": "worksheet",
+  "title": "Math 9 Substitution and Scientific Notation Practice",
+  "header": { "fields": ["name", "date"], "showGrade": false, "custom": [], "repeat": false },
+  "footer": { "pageNumbers": true },
+  "answers": { "handout": "final", "key": "worked" },
+  "paper": "letter",
+  "seed": "substitution-sci-1",
+  "blocks": [
+    { "kind": "question", "generator": { "name": "algebra.substitution", "params": {} } },
+    { "kind": "question", "generator": { "name": "algebra.substitution", "params": { "forms": ["terms", "sum-power"], "count": 4, "size": 5 } } },
+    { "kind": "question", "generator": { "name": "sci.multiply-divide", "params": { "digits": 1 }, "count": 4 } },
+    { "kind": "question", "generator": { "name": "sci.multiply-divide", "params": {}, "count": 4 } }
+  ]
+}

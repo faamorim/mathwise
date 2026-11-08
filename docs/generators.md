@@ -78,6 +78,8 @@ Example: `examples/recipes/math9-powers-practice-quiz.json` ->
 | `sci.to-scientific` | $3700000$, $0.0000001$ | large/small, digits, exponent size |
 | `sci.normalize` | $247\times10^8$, $0.087\times10^3$ | too big/too small, digits, exponent size |
 | `sci.find-exponent` | $0.0000563=5.63\times10^n$ | large/small, digits, exponent size |
+| `sci.multiply-divide` | $(3\times10^4)(2\times10^5)$, $\dfrac{8\times10^{-3}}{2\times10^5}$; answers that need the decimal point moved ($20\times10^9$) | ×÷, significant digits, exponent size, negative exponents, answers that need fixing (some / none / all) |
+| `algebra.substitution` | Evaluate $-a^{-1}$, $(a+b+c)^{-1}$, $a^b$, $\left(\frac{2a}{b+c}\right)^{-3}$ for $a=-2,\ b=3,\ c=-4$ (whole question) | expression types, how many, size of the values, negative values. Unlinked, the teacher can type any expression in a, b, c |
 | `factoring.gcf` | $6x^5-16x^4+12x^2 = 2x^2(3x^3-8x^2+6)$ | terms, size of the common factor, variable in it, negatives |
 | `factoring.difference-of-squares` | $16x^2-9$, $x^6-25$ | square coefficient, largest root, higher powers |
 | `factoring.perfect-square` | $9x^2+24x+16$, $x^2-6x+9$ | square coefficient, largest root, negative middle |
@@ -103,6 +105,15 @@ trinomial `methods` setting only changes the worked steps, never the numbers; wi
 both methods ticked the key shows each one under its own heading, and the item
 carries them separately in `methods` (contract section 3). Example recipe:
 `examples/recipes/math10-factoring-practice.json`.
+
+## Substitution
+
+`algebra.substitution` keeps its expressions as text a teacher can type
+(`(2a/(b+c))^-3`, `-a^-1`, `3a^2b`), so an unlinked question takes any expression in
+$a$, $b$, $c$. The worked steps come from the expression: substitute (negatives in
+brackets), then one layer per line (everything whose inputs are already numbers), with
+$x^{-n}=\frac{1}{x^n}$ and small powers written out ($(-2)^3=(-2)(-2)(-2)$) as their
+own lines. Example recipe: `examples/recipes/math9-substitution-and-sci-practice.json`.
 
 ## Graphs
 

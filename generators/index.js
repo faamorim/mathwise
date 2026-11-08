@@ -20,6 +20,7 @@
     'sci-notation.js',
     'factoring.js',
     'linear.js',
+    'substitution.js',
     'data/planets.js',
     'data/stories-rates.js',
     'data/stories-space.js',

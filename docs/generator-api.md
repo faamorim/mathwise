@@ -136,6 +136,7 @@ generate               =  render(pick(...))         checked by tests/check-contr
 { key, label, kind: 'letter' }                          // one letter, like x
 { key, label, kind: 'int-or-letter' }                   // a base: 7, -5 or p
 { key, label, kind: 'digits' }                          // significant digits, like "37"
+{ key, label, kind: 'text', maxLength? }                // short text a teacher types, like an expression "(2a/(b+c))^-3"; the generator's checkVars checks its meaning
 { key, label, kind: 'choice', values: [{ value, label }] }
 { key, label, kind: 'toggle' }                          // true / false
 { key, label, kind: 'list', of: { kind, ... }, minLength?, maxLength? }
