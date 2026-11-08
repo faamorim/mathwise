@@ -273,3 +273,6 @@ input.look-num { width: 5em; }
 .tmpl-nested { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 10px; padding-left: 8px; border-left: 2px solid #c9d8f0; }
 .tmpl-nested-label { font-size: 11px; color: #556; align-self: center; }
 .btn.ready { border-style: dashed; }
+
+.tmpl-list { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.tmpl-list-row { display: flex; gap: 4px; align-items: center; }
