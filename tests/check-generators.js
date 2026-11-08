@@ -184,6 +184,28 @@ for (const gen of G.list()) {
       if (!G.checkVars(name, w).length) { const rw = G.render(name, w); lineOk(name + ' edited ' + JSON.stringify(w), MW.linear.eqTex(w), rw.graph); assert.strictEqual(MG.check(rw.graph).length, 0); }
     }
   }
+  // Matching cards: every card is a valid graph, and each equation's letter is the card with its line.
+  for (let seed = 0; seed < 300; seed++) {
+    const params = [{}, { extra: 2, count: 3 }, { slopes: ['integer', 'fraction', 'zero'], count: 6 }][seed % 3];
+    const b = G.fillBlock({ kind: 'question', generator: { name: 'linear.match-graphs', params, seed: 'mg' + seed } });
+    assert.strictEqual(b.parts.length, params.count || 4, 'match count');
+    assert.strictEqual(b.choices.length, (params.count || 4) + (params.extra || 0), 'cards');
+    b.choices.forEach((c) => assert.strictEqual(MG.check(c.graph).length, 0, 'card graph'));
+    const letters = new Set();
+    b.parts.forEach((p) => {
+      const card = b.choices[p.answer.charCodeAt(0) - 65];
+      assert.ok(card && !letters.has(p.answer), 'answer letter ' + p.answer);
+      letters.add(p.answer);
+      const f = MG.compile(card.graph.items[0].expr), rhs = /^\$y=(.*)\$$/.exec(p.prompt)[1];
+      [-2, 0, 1.5, 3].forEach((x) => { if (Math.abs(f(x) - evaluate(rhs, { x })) > 1e-9) fails.push('match-graphs seed mg' + seed + ': ' + p.prompt + ' is not card ' + p.answer); });
+    });
+  }
+  {
+    const lines = ['2x+1', '-x', '3/4x-2', '5'];
+    const r = G.render('linear.match-graphs', { lines, matched: 3, cards: [4, 3, 1, 2] });
+    assert.strictEqual(r.parts.map((p) => p.answer).join(''), 'CDB', 'typed cards');
+    assert.strictEqual(r.choices[0].graph.items[0].expr, '5');
+  }
   // The expression language reads board notation.
   const c = (e, x) => MG.compile(e)(x);
   assert.strictEqual(c('-1/2x+3', 4), 1);

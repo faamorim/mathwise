@@ -87,6 +87,13 @@ Returns one item:
   "Graph $y=2x+1$" gives the student an empty grid and the key the line). `fillBlock`
   copies it to the part (or block, for `whole`). Pages draw it with
   `Mathwise.graph.sample`; pages that cannot draw yet ignore it.
+- Optional `choices` (matching cards, Thinking Classroom style): a list of cards
+  `{ label?, text?, graph? }` the parts are matched to. Labels default to A, B, C, …;
+  `text` is worksheet markup, `graph` uses `docs/graph-format.md`. Each part's `answer`
+  is a card's letter (or several, like "B, D"). There may be more cards than parts
+  (cards that match nothing). Card order comes from the seed. `fillBlock` puts them on
+  the block (whole generators) or the part, and they stay at every output level. The
+  page owns the layout (a row of cards, cut-out cards, a letter blank on each part).
 - Items may later carry extra optional fields (see *Planned*); pages ignore what they
   do not know.
 

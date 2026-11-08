@@ -89,6 +89,7 @@ Example: `examples/recipes/math9-powers-practice-quiz.json` ->
 | `factoring.mixed` | Any of the above, shuffled; the key starts with how to recognise the type | question types, trinomial settings |
 | `linear.graph-line` | Graph $y=-\frac23x+1$: empty grid for the student, the line and a table of points in the key | slopes (whole / fractions / zero), negative slopes, largest y-intercept, plane size, **worked steps by** (table of values, y-intercept and slope) |
 | `linear.equation-from-graph` | A line on a grid, write $y=mx+b$ | slopes, negative slopes, largest y-intercept, plane size |
+| `linear.match-graphs` | Matching cards: equations as parts, graphs as cards A, B, C, … made of lines that are easy to mix up (same slope, opposite slope, swapped slope and intercept); key gives the letter and how to tell | slopes, negative slopes, equations to match (3–6), extra cards that match nothing. Unlinked, the teacher can type the lines and the card order |
 | `rates.typing-race` | Two people typing (seconds vs minutes): who is faster, difference in one hour, + thinking parts | thinking questions on/off |
 | `rates.swim-laps` | Laps per hour, time for more laps, + why the rate could change | thinking questions on/off |
 | `rates.hose` | Litres per hour, time to fill the tank, + why it could take longer | thinking questions on/off |
