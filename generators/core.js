@@ -255,6 +255,11 @@
       if (!d.values.some(function (o) { return o.value === x; })) return 'choose one of ' + d.values.map(function (o) { return o.label; }).join(', ');
     },
     toggle: function (x) { if (typeof x !== 'boolean') return 'must be on or off'; },
+    // Short text a teacher may type, like an expression "(2a/(b+c))^-3" (the generator checks its meaning).
+    text: function (x, d) {
+      if (typeof x !== 'string' || !x.trim()) return 'must be some text';
+      if (d.maxLength != null && x.length > d.maxLength) return 'is too long (at most ' + d.maxLength + ' characters)';
+    },
     // The vars of another template: { key, kind: 'vars', by: 'form', templates: { formValue: 'generator.name' } }.
     // Checked (deeply) in checkVars; a page shows that template's variables.
     vars: function (x) { if (!x || typeof x !== 'object' || Array.isArray(x)) return 'must be a set of values'; },

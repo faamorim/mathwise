@@ -38,6 +38,13 @@ const VARIANTS = {
   'factoring.four-term': [{ coefficients: false, negatives: false }, { maxConstant: 12 }]
 };
 
+// Values given in a block prompt: "Evaluate each expression for $a=-3,\ b=2,\ c=-1$".
+function givenIn(prompt) {
+  const given = {};
+  const m = /for \$([^$]*)\$/.exec(prompt || '');
+  if (m) m[1].split(/,\\ |,/).forEach((kv) => { const [k, v] = kv.split('='); given[k.trim()] = Number(v); });
+  return given;
+}
 let items = 0, checked = 0;
 const fails = [];
 for (const gen of G.list()) {
@@ -51,7 +58,7 @@ for (const gen of G.list()) {
         items++;
         ['prompt', 'answer', 'solution'].forEach((k) => katexOk(it[k], gen.name + ' ' + k));
         assert.ok(it.prompt && it.answer, gen.name + ' gives prompt and answer');
-        const r = checkItem(it);
+        const r = checkItem(it, givenIn(a.prompt));
         if (r) { checked++; if (r.length) fails.push(gen.name + ' ' + JSON.stringify(params) + ' seed s' + seed + ': ' + it.prompt + '\n    ' + r.join('\n    ')); }
       }
     }
@@ -196,6 +203,37 @@ for (const gen of G.list()) {
   console.log('Graphs OK: ' + graphs + ' generated graphs checked.');
 }
 
+// Substitution: teacher-typed values and expressions work out right (or get a message).
+{
+  const S = MW.substitution;
+  const exprs = ['-a^-1', '(a+b+c)^-1', 'a^b', '(2a/(b+c))^-3', '3a^2b', 'a^2-2c', '-ab', '(-a)^2', '-2^2', 'a/(2b)', '2^a', '(a-b)^2', 'a(b+c)', '-(a+b)^-2', '(1/a)^-2'];
+  let n = 0;
+  for (let a = -5; a <= 5; a++) for (let b = -4; b <= 4; b += 2) for (const c of [-3, 1, 4]) {
+    const vars = { a, b, c, expressions: exprs };
+    for (const e of exprs) {
+      let r;
+      try { r = S.work(e, vars); } catch (err) { continue; }   // 0 to a negative power, …: checkVars says why
+      n++;
+      const it = { prompt: '$' + r.prompt + ' =$', answer: '$' + r.answer + '$', solution: r.steps.join('\n') };
+      ['prompt', 'answer', 'solution'].forEach((f) => katexOk(it[f], 'substitution ' + e));
+      const c2 = checkPlain(it, { a, b, c });
+      if (!c2 || c2.length) fails.push('substitution ' + e + ' for ' + JSON.stringify({ a, b, c }) + ': ' + (c2 ? c2.join('; ') : 'not checked'));
+    }
+  }
+  assert.ok(n > 1000, 'substitution cases');
+  const bad = G.checkVars('algebra.substitution', { a: 0, b: 2, c: 3, expressions: ['a^-1', 'd+1', '2a+'] });
+  assert.ok(bad.length === 3 && bad[0].includes('negative power') && bad[1].includes('only a, b and c') && bad[2].includes('ends too soon'), bad.join(' | '));
+  // Granular: substitution first, then one layer per line (the sample quiz's steps).
+  assert.strictEqual(S.work('(2a/(b+c))^-3', { a: -2, b: 3, c: -4 }).steps.join(' '),
+    '$= \\left(\\dfrac{2(-2)}{3+(-4)}\\right)^{-3}$ $= \\left(\\dfrac{-4}{-1}\\right)^{-3}$ $= 4^{-3}$ $= \\dfrac{1}{4^3}$ $= \\dfrac{1}{4\\times4\\times4}$');
+  // Scientific notation ×÷: answers are in scientific notation, and uneven quotients are refused.
+  for (let seed = 0; seed < 300; seed++) {
+    const r = G.render('sci.multiply-divide', G.pick('sci.multiply-divide', {}, 'md' + seed, { index: seed % 4, count: 4 }));
+    assert.ok(/^\$[1-9](\.\d*[1-9])?\\times10\^/.test(r.answer), 'scientific notation answer ' + r.answer);
+  }
+  assert.ok(G.checkVars('sci.multiply-divide', { op: 'divide', digits1: '1', exponent1: 2, digits2: '3', exponent2: 1 })[0].includes('do not divide'));
+}
+
 // Friendly messages for vars that do not fit.
 assert.ok(G.checkVars('powers.monomials', { letter: 'x', coefficients: [6, 4], exponents: [2, 1], ops: ['divide'] })[0].includes('whole'));
 assert.ok(G.checkVars('sci.to-scientific', { digits: '370', exponent: 3 })[0].includes('nonzero digit'));
@@ -211,9 +249,7 @@ for (const f of fs.readdirSync(path.join(__dirname, '..', 'examples')).filter((f
   const doc = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'examples', f), 'utf8'));
   doc.blocks.filter((b) => b.kind === 'question').forEach((b, bi) => {
     // "Evaluate each expression for $a=-3,\ b=2,\ c=-1$": use those values.
-    const given = {};
-    const m = /for \$([^$]*)\$/.exec(b.prompt || '');
-    if (m) m[1].split(/,\\ |,/).forEach((kv) => { const [k, v] = kv.split('='); given[k.trim()] = Number(v); });
+    const given = givenIn(b.prompt);
     for (const it of b.parts || [b]) {
       const r = checkItem(it, given);
       if (r && r.length) fails.push(f + ' block ' + bi + ': ' + it.prompt + '\n    ' + r.join('\n    '));

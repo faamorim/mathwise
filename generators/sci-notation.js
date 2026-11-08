@@ -126,5 +126,110 @@
     }
   });
 
+  // ---------- multiply and divide ----------
+  // A decimal is { c, k }: the whole number c times 10^-k, so 2.5 = { c: 25, k: 1 }.
+  function dec(s) { return { c: parseInt(s, 10), k: s.length - 1 }; }
+  function decMul(a, b) { return { c: a.c * b.c, k: a.k + b.k }; }
+  function decDiv(a, b) {
+    for (var m = 0; m <= 8; m++) {
+      var top = a.c * Math.pow(10, m);
+      if (top % b.c === 0) return { c: top / b.c, k: a.k - b.k + m };
+    }
+    return null;   // does not end within 8 decimal places
+  }
+  function decText(x) {
+    var c = String(x.c), k = x.k;
+    if (k <= 0) return c + '0'.repeat(-k);
+    while (c.length <= k) c = '0' + c;
+    var s = c.slice(0, c.length - k) + '.' + c.slice(c.length - k);
+    return s.replace(/\.?0+$/, '');
+  }
+  // The decimal as significant digits and a power of ten: 20 -> { digits: '2', shift: 1 }.
+  function decSci(x) {
+    var c = String(x.c), shift = c.length - 1 - x.k;
+    return { digits: c.replace(/0+$/, ''), shift: shift };
+  }
+  function sciMD(x) {
+    var a = dec(x.digits1), b = dec(x.digits2);
+    var r = x.op === 'multiply' ? decMul(a, b) : decDiv(a, b);
+    if (!r) return null;
+    var n = decSci(r), e = x.op === 'multiply' ? x.exponent1 + x.exponent2 : x.exponent1 - x.exponent2;
+    return { value: r, sci: n, exponent: e };
+  }
+  var MD_OPS = [{ value: 'multiply', label: 'Multiply' }, { value: 'divide', label: 'Divide' }];
+
+  G.register({
+    name: 'sci.multiply-divide',
+    topic: 'Scientific notation',
+    title: 'Multiply and divide in scientific notation',
+    prompt: 'Calculate. Write each answer in scientific notation.',
+    columns: 2,
+    workSpace: 2,
+    params: [
+      { key: 'ops', label: 'Operations', type: 'set', default: ['multiply', 'divide'], values: MD_OPS },
+      { key: 'digits', label: 'Significant digits in each number', type: 'number', min: 1, max: 3, default: 2 },
+      { key: 'maxExponent', label: 'Largest exponent (size)', type: 'number', min: 1, max: 15, default: 9 },
+      { key: 'negatives', label: 'Negative exponents', type: 'toggle', default: true },
+      { key: 'fix', label: 'Answers that need the decimal point moved (like 20 × 10⁹)', type: 'choice', default: 'some',
+        values: [{ value: 'some', label: 'Some' }, { value: 'none', label: 'None' }, { value: 'all', label: 'All' }] }
+    ],
+    variables: [
+      { key: 'op', label: 'Operation', kind: 'choice', values: MD_OPS },
+      { key: 'digits1', label: 'First number: significant digits', kind: 'digits' },
+      { key: 'exponent1', label: 'First number: power of ten', kind: 'int', min: -30, max: 30 },
+      { key: 'digits2', label: 'Second number: significant digits', kind: 'digits' },
+      { key: 'exponent2', label: 'Second number: power of ten', kind: 'int', min: -30, max: 30 }
+    ],
+    checkVars: function (x) {
+      return sciMD(x) ? [] : ['These coefficients do not divide evenly: choose numbers whose quotient ends, like 8.4 ÷ 2.'];
+    },
+    pick: function (v, rng, ctx) {
+      var op = ctx.spread('ops', rng), x;
+      function exp() { var e = rng.int(v.negatives ? -v.maxExponent : 1, v.maxExponent); return e === 0 ? 1 : e; }
+      for (var t = 0; t < 100; t++) {
+        var p = digits(rng, rng.int(1, v.digits)), q = digits(rng, rng.int(1, v.digits));
+        if (op === 'multiply') x = { op: op, digits1: p, exponent1: exp(), digits2: q, exponent2: exp() };
+        else {
+          // Built answer first: dividend = quotient × divisor, written in scientific notation.
+          var e2 = exp(), eq = exp(), d = decSci(decMul(dec(p), dec(q)));
+          x = { op: op, digits1: d.digits, exponent1: eq + e2 + d.shift, digits2: q, exponent2: e2 };
+          if (x.exponent1 === 0 || d.digits.length > v.digits + 1 || Math.abs(x.exponent1) > v.maxExponent + 1 || (!v.negatives && x.exponent1 < 1)) continue;
+        }
+        if (p === '1' || q === '1') continue;
+        var r = sciMD(x), moved = r && r.sci.shift !== 0;
+        if (!r || r.exponent + r.sci.shift === 0) continue;
+        // Some: every other part needs the decimal point moved.
+        var want = v.fix === 'all' || (v.fix === 'some' && (typeof ctx.index === 'number' ? ctx.index % 2 === 1 : moved));
+        if (want === moved) return x;
+      }
+      return x;
+    },
+    render: function (x) {
+      var r = sciMD(x), m1 = mantissa(x.digits1), m2 = mantissa(x.digits2);
+      var t1 = pow(10, x.exponent1), t2 = pow(10, x.exponent2);
+      var mul = x.op === 'multiply';
+      var P = decText(r.value), E = r.exponent, sh = r.sci.shift;
+      var steps = [
+        mul ? '$= (' + m1 + '\\times' + m2 + ')\\times(' + t1 + '\\times' + t2 + ')$'
+          : '$= \\dfrac{' + m1 + '}{' + m2 + '}\\times\\dfrac{' + t1 + '}{' + t2 + '}$',
+        '$= ' + P + '\\times' + pow(10, M.opExp(x.exponent1, mul ? '+' : '-', x.exponent2)) + '$',
+        '$= ' + P + '\\times' + pow(10, E) + '$'
+      ];
+      var answer = sci(r.sci.digits, E + sh);
+      if (sh === 0) steps.pop();   // already the answer
+      if (sh !== 0) {
+        steps.push('$= ' + mantissa(r.sci.digits) + '\\times' + pow(10, sh) + '\\times' + pow(10, E) + '$');
+        steps.push('$= ' + mantissa(r.sci.digits) + '\\times' + pow(10, M.opExp(sh, '+', E)) + '$');
+      }
+      return {
+        prompt: mul ? '$(' + sci(x.digits1, x.exponent1) + ')(' + sci(x.digits2, x.exponent2) + ') =$'
+          : '$\\dfrac{' + sci(x.digits1, x.exponent1) + '}{' + sci(x.digits2, x.exponent2) + '} =$',
+        steps: steps,
+        answer: '$' + answer + '$',
+        slots: { result: E + sh }
+      };
+    }
+  });
+
   root.Mathwise.sci = { standard: standard, mantissa: mantissa };
 })(typeof window !== 'undefined' ? window : this);
