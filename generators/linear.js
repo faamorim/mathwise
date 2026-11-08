@@ -27,7 +27,7 @@
   // The same line in the graph expression language: "-2/3x+1".
   function exprOf(v) {
     var s = slope(v);
-    var c = s.n === 0 ? '' : (s.n < 0 ? '-' : '') + Math.abs(s.n) + (s.d > 1 ? '/' + s.d : '') + 'x';
+    var c = s.n === 0 ? '' : (s.n < 0 ? '-' : '') + (Math.abs(s.n) === 1 && s.d === 1 ? '' : Math.abs(s.n)) + (s.d > 1 ? '/' + s.d : '') + 'x';
     if (!c) return String(v.b);
     return c + (v.b === 0 ? '' : (v.b < 0 ? '-' : '+') + Math.abs(v.b));
   }
@@ -174,6 +174,107 @@
         '$' + eq + '$'
       ];
       return { prompt: '$y=\\underline{\\qquad\\qquad}$', steps: steps, answer: '$' + eq + '$', graph: g, slots: { equation: eq } };
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // Matching cards (Thinking Classroom style): equations as parts, graphs as cards A, B, C, …
+  // Lines are kept as text in the graph language ("-2/3x+1") so a teacher can type them.
+  function readLine(src) {
+    var m = /^\s*([+-]?)(\d*)(?:\/(\d+))?x\s*(?:([+-])\s*(\d+))?\s*$/.exec(src), c;
+    if (m) {
+      var top = m[2] === '' ? 1 : parseInt(m[2], 10), bot = m[3] ? parseInt(m[3], 10) : 1;
+      c = { rise: (m[1] === '-' ? -1 : 1) * top, run: bot, b: m[4] ? (m[4] === '-' ? -1 : 1) * parseInt(m[5], 10) : 0 };
+    } else if ((m = /^\s*([+-]?\d+)\s*$/.exec(src))) c = { rise: 0, run: 1, b: parseInt(m[1], 10) };
+    if (!c || c.run === 0) return null;
+    return c;
+  }
+  var CARD = 5;   // small planes, −5 to 5
+  function cardGraph(v) {
+    return { size: [3.5, 3.5], x: { min: -CARD, max: CARD, grid: 1, numbers: false, label: 'x' }, y: { min: -CARD, max: CARD, grid: 1, numbers: false, label: 'y' },
+      items: [{ type: 'function', expr: exprOf(v) }] };
+  }
+  // Lines that are easy to mix up with v: same slope, opposite slope, swapped m and b, …
+  function family(v) {
+    var s = slope(v), out = [];
+    function add(r, n, b) { out.push({ rise: r, run: n, b: b, size: CARD }); }
+    add(s.n, s.d, -v.b);           // same slope, opposite intercept
+    add(-s.n, s.d, v.b);           // opposite slope, same intercept
+    add(-s.n, s.d, -v.b);
+    if (s.d === 1 && s.n !== 0) add(v.b, 1, s.n);                 // m and b swapped
+    if (s.n !== 0 && Math.abs(s.n) !== s.d) add(s.d * Math.sign(s.n), Math.abs(s.n), v.b);   // run and rise swapped
+    add(s.n, s.d, v.b + (v.b > 0 ? -2 : 2));
+    add(0, 1, v.b);                // horizontal through the same intercept
+    return out;
+  }
+
+  G.register({
+    name: 'linear.match-graphs',
+    topic: 'Linear relations',
+    title: 'Match equations to graphs (cards)',
+    prompt: 'Match each equation to its graph',
+    whole: true,
+    columns: 2,
+    workSpace: 0.5,
+    params: [
+      { key: 'slopes', label: 'Slopes', type: 'set', default: ['integer', 'fraction'], values: SLOPES },
+      { key: 'negatives', label: 'Negative slopes', type: 'toggle', default: true },
+      { key: 'count', label: 'Equations to match', type: 'number', min: 3, max: 6, default: 4 },
+      { key: 'extra', label: 'Extra graphs that match nothing', type: 'number', min: 0, max: 2, default: 0 }
+    ],
+    variables: [
+      { key: 'lines', label: 'Lines y = … (like 2x+1 or -2/3x-1); the first ones are the equations, the rest extra cards', kind: 'list', of: { kind: 'text', maxLength: 20 }, minLength: 2, maxLength: 8 },
+      { key: 'matched', label: 'How many lines are equations to match', kind: 'int', min: 1, max: 8 },
+      { key: 'cards', label: 'Card order (line numbers from 1)', kind: 'list', of: { kind: 'int', min: 1, max: 8 }, minLength: 2, maxLength: 8 }
+    ],
+    checkVars: function (v) {
+      var errs = [], seen = {};
+      v.lines.forEach(function (src, i) {
+        var c = readLine(src);
+        if (!c) errs.push('Line ' + (i + 1) + ' (' + src + ') must look like 2x+1, -x, 3/4x-2 or 5.');
+        else if (Math.abs(c.b) > CARD) errs.push('Line ' + (i + 1) + ': the y-intercept must be from −' + CARD + ' to ' + CARD + ' (the cards are small).');
+        else { var e = eqTex(c); if (seen[e]) errs.push('Line ' + (i + 1) + ' is the same as another line.'); seen[e] = true; }
+      });
+      if (v.matched > v.lines.length) errs.push('There are only ' + v.lines.length + ' lines to match.');
+      var sorted = v.cards.slice().sort(function (a, b) { return a - b; });
+      if (sorted.length !== v.lines.length || sorted.some(function (x, i) { return x !== i + 1; })) errs.push('Card order must list each line number from 1 to ' + v.lines.length + ' once.');
+      return errs;
+    },
+    pick: function (p, rng, ctx) {
+      var want = p.count + p.extra, lines = [], seen = {};
+      function take(x) {
+        var e = eqTex(x);
+        if (seen[e] || Math.abs(x.b) > CARD || latticePoints(x, CARD).length < 2) return;
+        seen[e] = true; lines.push(x);
+      }
+      var opts = { slopes: p.slopes, negatives: p.negatives, maxIntercept: 3, size: CARD };
+      for (var t = 0; lines.length < want && t < 50; t++) {
+        var base = pickLine(opts, rng, ctx);
+        take(base);
+        rng.shuffle(family(base)).forEach(function (x) { if (lines.length < want) take(x); });
+      }
+      lines = lines.slice(0, want);
+      var order = rng.shuffle(lines.map(function (_, i) { return i + 1; }));
+      return { lines: lines.map(exprOf), matched: Math.min(p.count, lines.length), cards: order };
+    },
+    render: function (v) {
+      var lines = v.lines.map(readLine);
+      var choices = v.cards.map(function (n) { return { graph: cardGraph(lines[n - 1]) }; });
+      var parts = lines.slice(0, v.matched).map(function (c, i) {
+        var letter = String.fromCharCode(65 + v.cards.indexOf(i + 1)), s = slope(c);
+        var m = s.n === 0 ? '0' : s.d === 1 ? num(s.n) : (s.n < 0 ? '-' : '') + '\\frac{' + Math.abs(s.n) + '}{' + s.d + '}';
+        return {
+          prompt: '$' + eqTex(c) + '$',
+          answer: letter,
+          steps: [
+            'The y-intercept is $' + num(c.b) + '$: the line crosses the $y$-axis at $' + pt(0, c.b) + '$',
+            s.n === 0 ? 'The slope is $0$: the line is horizontal'
+              : 'The slope is $' + m + '$: the line goes ' + (s.n > 0 ? 'up' : 'down') + ' from left to right' + (s.d > 1 || Math.abs(s.n) > 1 ? ', ' + (s.n > 0 ? 'up ' + s.n : 'down ' + -s.n) + ' for every ' + s.d + ' right' : ''),
+            'Graph ' + letter + ' is the only one with both'
+          ]
+        };
+      });
+      return { prompt: 'Match each equation to its graph', answer: '', steps: [], choices: choices, parts: parts };
     }
   });
 

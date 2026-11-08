@@ -12,6 +12,8 @@
     { "kind": "question", "generator": { "name": "linear.graph-line", "params": { "slopes": ["integer"], "methods": ["table", "slope-intercept"] }, "count": 2 } },
     { "kind": "question", "generator": { "name": "linear.graph-line", "params": { "slopes": ["fraction", "zero"], "methods": ["slope-intercept"] }, "count": 2 } },
     { "kind": "heading", "text": "Equation from the graph" },
-    { "kind": "question", "generator": { "name": "linear.equation-from-graph", "params": {}, "count": 4 } }
+    { "kind": "question", "generator": { "name": "linear.equation-from-graph", "params": {}, "count": 4 } },
+    { "kind": "heading", "text": "Match the cards" },
+    { "kind": "question", "generator": { "name": "linear.match-graphs", "params": { "extra": 1 } } }
   ]
 }

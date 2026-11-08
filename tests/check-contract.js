@@ -70,6 +70,11 @@ gens.forEach((gen) => {
   check(none.answer === undefined && isStr(none.prompt), where("output 'none' must give the prompt only"));
   // An optional graph follows docs/graph-format.md and stays at every output level
   // (the student needs the grid; key-only items are marked key: true).
+  // Optional matching cards: { label?, text?, graph? } each, with a valid graph when there is one.
+  if (a.choices !== undefined) {
+    check(Array.isArray(a.choices) && a.choices.length > 1 && a.choices.every((c) => c && (isStr(c.text) || c.graph) && (!c.graph || MW.graph.check(c.graph).length === 0)), where('choices must be cards with text or a valid graph'));
+    check(JSON.stringify(none.choices) === JSON.stringify(a.choices), where("output 'none' must keep the choices"));
+  }
   if (a.graph !== undefined) {
     check(MW.graph.check(a.graph).length === 0, where('graph: ' + MW.graph.check(a.graph).join('; ')));
     check(JSON.stringify(none.graph) === JSON.stringify(a.graph), where("output 'none' must keep the graph"));
