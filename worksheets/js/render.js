@@ -121,6 +121,20 @@
 
   // Compact sheets (work on separate paper): "5^{-1} =" reads as "5^{-1}".
   // Only a trailing equals sign goes; prompts with fill-in blanks are kept.
+  // A graph beside or below `textEl` (its `place`); returns what to put in the page.
+  function withGraph(textEl, g, opts) {
+    var ge = g && WS.graph ? WS.graph.el(g, { key: !!opts.showAnswers }) : null;
+    if (!ge) return [textEl];
+    if (g.place === 'right' || g.place === 'left') {
+      var row = el('div', 'q-graph-row' + (g.place === 'left' ? ' left' : ''));
+      textEl.classList.add('q-graph-text');
+      if (g.place === 'left') { row.appendChild(ge); row.appendChild(textEl); }
+      else { row.appendChild(textEl); row.appendChild(ge); }
+      return [row];
+    }
+    return [textEl, ge];
+  }
+
   function noTrailingEquals(src) {
     src = String(src == null ? '' : src);
     if (src.indexOf('[[') >= 0) return src;
@@ -150,7 +164,7 @@
       prompt.insertAdjacentHTML('beforeend',
         '<span class="q-marks">[' + fmtMarks(mk) + (mk === 1 ? ' mark' : ' marks') + ']</span>');
     }
-    body.appendChild(prompt);
+    withGraph(prompt, q.graph, opts).forEach(function (e) { body.appendChild(e); });
     head.appendChild(body);
     if (!parts && !q.table) {
       var sp = doc.compact ? 0 : q.space != null ? q.space : defaultSpace;   // compact: work goes on separate paper
@@ -182,7 +196,7 @@
             line.appendChild(el('span', 'p-label', M.escapeHtml(WS.model.partLabel(j, p))));
             var pFill = { answer: p.answer || '' };
             line.appendChild(el('span', 'p-prompt', M.inline(compact ? noTrailingEquals(p.prompt) : p.prompt, withFill(opts, pFill))));
-            cell.appendChild(line);
+            withGraph(line, p.graph, opts).forEach(function (e) { cell.appendChild(e); });
             // An open-ended (thinking) part gets at least 3 lines unless set by hand.
             var ps = doc.compact ? 0 : p.space != null ? p.space : (p.thinking ? Math.max(partSpace, 3) : partSpace);
             var pa = opts.showAnswers && pFill.answer ? M.inline(p.answer) : '';
@@ -278,13 +292,30 @@
   // "#1: a) ..., b) ..." one line per question.
   function finalAnswerFragments(doc) {
     var key = WS.model.answerKey(doc);
-    var out = key.map(function (q) {
+    var out = [];
+    key.forEach(function (q) {
       var items = q.items.filter(function (it) { return it.answer; }).map(function (it) {
         return (it.label ? '<span class="ak-part">' + M.escapeHtml(it.label) + '</span>&nbsp;' : '') +
           M.inline(it.answer);
       }).join(',&ensp; ');
-      return frag(el('div', 'ak-item', '<span class="ak-q">' + M.escapeHtml(keyLabel(q.label)) + ':</span> ' + items),
-        q.blockIndex, false);
+      out.push(frag(el('div', 'ak-item', '<span class="ak-q">' + M.escapeHtml(keyLabel(q.label)) + ':</span> ' + items),
+        q.blockIndex, false));
+      // Answers drawn on a graph: small copies under the line.
+      var withG = (q.graph ? [{ label: '', graph: q.graph }] : []).concat(q.items).filter(function (it) {
+        return it.graph && WS.graph && WS.graph.hasKeyItems(it.graph);
+      });
+      if (withG.length) {
+        var row = el('div', 'ak-graphs');
+        withG.forEach(function (it) {
+          var ge = WS.graph.el(it.graph, { key: true, scale: 0.6 });
+          if (!ge) return;
+          var box = el('div', 'ak-graph');
+          if (it.label) box.appendChild(el('span', 'ak-part', M.escapeHtml(it.label)));
+          box.appendChild(ge);
+          row.appendChild(box);
+        });
+        out.push(frag(row, q.blockIndex, false));
+      }
     });
     if (!out.length) out.push(frag(el('p', 'ak-empty', 'No answers stored yet.'), null, false));
     return out;
@@ -297,7 +328,12 @@
     key.forEach(function (q) {
       var head = el('div', 'wk-q block-start');
       head.appendChild(el('span', 'q-label', M.escapeHtml(q.label)));
-      head.appendChild(el('div', 'q-body', M.html(q.prompt || '')));
+      var qb = el('div', 'q-body', M.html(q.prompt || ''));
+      if (q.graph && WS.graph && WS.graph.hasKeyItems(q.graph)) {
+        var qg = WS.graph.el(q.graph, { key: true });
+        if (qg) qb.appendChild(qg);
+      }
+      head.appendChild(qb);
       out.push(frag(head, q.blockIndex, true));
       // Lay the parts out in the same columns as the questions (at most 4), one
       // fragment per row, so the key uses the page width like the handout does.
@@ -322,6 +358,10 @@
           // No steps written: prompt and answer on one line.
           b.appendChild(el('div', 'wk-prompt', (it.prompt ? M.inline(it.prompt) + '&ensp;' : '') +
             (it.answer ? '<span class="wk-ans">' + M.inline(it.answer) + '</span>' : '')));
+        }
+        if (it.graph && WS.graph && WS.graph.hasKeyItems(it.graph)) {
+          var ig = WS.graph.el(it.graph, { key: true });
+          if (ig) b.appendChild(ig);
         }
         row.appendChild(b);
         grid.appendChild(row);

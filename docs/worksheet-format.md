@@ -59,7 +59,7 @@ this page explains it with examples. Full examples live in [`examples/`](../exam
 |---|---|
 | `heading` | `text`, `size` (`s`/`m`/`l`), `align` |
 | `text` | `content` (rich text, see below), `align` |
-| `question` | `prompt`, `marks`, `space`, `answer`, `solution`, `parts`, `columns`, `boxed`, `table`, `label`, `numbered` |
+| `question` | `prompt`, `marks`, `space`, `answer`, `solution`, `parts`, `columns`, `boxed`, `table`, `graph`, `label`, `numbered` |
 | `example` | Same as a question, labelled EX1, EX2… and never marked. |
 | `table` | `header`, `rows`, `rowLabels`, `widths`, `rowSpace` |
 | `image` | `src` (embedded `data:` URL), `width` (% of page), `align`, `caption` |
@@ -78,6 +78,14 @@ this page explains it with examples. Full examples live in [`examples/`](../exam
   `marks` is the value of *each* part / blank cell. Anything unset uses `defaultMarks`.
 * A question can carry a `table` (same shape as a table block) whose blank cells students fill in.
 * Long question groups and tables continue on the next page, row by row.
+* A question or a part can carry a `graph`: a Cartesian plane and what is drawn on it, in the
+  shared format of [graph-format.md](graph-format.md). It is drawn at its real size in cm,
+  below the text, or right / left of it with `"place"`. Items marked `"key": true` (or a
+  whole graph marked `key`) are only drawn in the teacher key and with *Show answers*, in
+  blue: so "Graph $y=2x+1$" gives students an empty grid and the key the line. In the
+  teacher key, graphs with answers on them are drawn under the worked solution, and as small
+  copies under the line on the answers page. In the editor, *+ Add a graph* (or 📈 on a part)
+  edits the axes, lines and curves (`y =` …), and points (`A(2, 5)`, optionally joined).
 
 ### Tables
 

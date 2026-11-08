@@ -21,6 +21,7 @@
     showAnswers: false,
     view: 'handout',
     openSteps: new WeakSet(),
+    openGraphs: new WeakSet(),
     genOpen: new WeakSet(),
     printing: false,
     lookOpen: false,
@@ -791,7 +792,8 @@
       var list = h('div', { class: 'parts' });
       list.appendChild(h('div', { class: 'part-row head' },
         h('span'), h('span', { text: 'Part' }), h('span', { text: 'Answer' }),
-        h('span', { text: isQ ? 'Marks' : '' }), h('span', { text: 'Space' }), h('span', { text: isQ ? 'Steps' : '' }), h('span')));
+        h('span', { text: isQ ? 'Marks' : '' }), h('span', { text: 'Space' }), h('span', { text: isQ ? 'Steps' : '' }),
+        h('span', { text: generated ? '' : 'Graph' }), h('span')));
       q.parts.forEach(function (p, pi) {
         list.appendChild(h('div', { class: 'part-row', 'data-part': pi },
           h('span', { class: 'lbl', text: model.partLabel(pi, p) + (p.thinking ? ' 💭' : ''),
@@ -808,12 +810,23 @@
               changed(true);
             }
           }) : h('span'),
+          !generated ? h('button', {
+            class: 'btn icon' + (p.graph ? ' on' : ''), text: '📈',
+            title: 'A graph for this part',
+            onclick: function () {
+              if (state.openGraphs.has(p)) state.openGraphs.delete(p); else state.openGraphs.add(p);
+              changed(true);
+            }
+          }) : h('span'),
           h('button', { class: 'btn icon danger', title: 'Remove part', text: '✕', onclick: function () {
             snapshot();
             q.parts.splice(pi, 1);
             if (!q.parts.length) delete q.parts;
             changed(true);
           } })));
+        if (!generated && (state.openGraphs.has(p) || p.graph)) {
+          list.appendChild(h('div', { class: 'part-graph' }, graphBox(p, 'graph', 'part ' + model.partLabel(pi, p))));
+        }
         if (isQ && (state.openSteps.has(p) || p.solution)) {
           list.appendChild(h('div', { class: 'part-steps' },
             textInput(p, 'solution', {
@@ -843,6 +856,139 @@
       } }));
     }
     body.appendChild(tbox);
+
+    // Graph (generated questions draw their own)
+    if (!generated) body.appendChild(graphBox(q, 'graph', 'this ' + (isQ ? 'question' : 'example')));
+  }
+
+  // ---------- graphs (docs/graph-format.md; drawn by js/graph-draw.js) ----------
+
+  function newGraph() {
+    return { size: [6, 6], x: { min: -6, max: 6, grid: 1, numbers: 1, label: 'x' },
+      y: { min: -6, max: 6, grid: 1, numbers: 1, label: 'y' }, items: [] };
+  }
+  function pointsText(pts) {
+    return (pts || []).map(function (p) { return (p[2] ? p[2] : '') + '(' + p[0] + ', ' + p[1] + ')'; }).join('  ');
+  }
+  function parsePoints(text) {
+    var out = [], re = /([A-Za-z]\w*)?\s*\(\s*(-?\d*\.?\d+)\s*[,;]\s*(-?\d*\.?\d+)\s*\)/g, m;
+    while ((m = re.exec(text))) out.push(m[1] ? [+m[2], +m[3], m[1]] : [+m[2], +m[3]]);
+    return out;
+  }
+
+  // Add / edit / remove obj[key] as a graph.
+  function graphBox(obj, key, what) {
+    var box = h('div', { class: 'sub graph-box' });
+    var g = obj[key];
+    if (!g) {
+      box.appendChild(h('button', { class: 'btn small', text: '+ Add a graph to ' + what, onclick: function () {
+        snapshot(); obj[key] = newGraph(); changed(true);
+      } }));
+      return box;
+    }
+    g.x = g.x || {}; g.y = g.y || {};
+    var msg = h('p', { class: 'error gen-error' });
+    function check() {
+      var errs = WS.graph ? WS.graph.problems(g) : [];
+      msg.textContent = errs.join(' ');
+      msg.hidden = !errs.length;
+    }
+    // Typing changes the preview; leaving the field redraws the card.
+    function num(o, k, attrs, after) {
+      var e = h('input', Object.assign({ type: 'number', step: 'any', class: 'graph-num' }, attrs || {}));
+      if (o[k] != null && o[k] !== false) e.value = o[k];
+      e.addEventListener('input', function () {
+        var v = e.value.trim();
+        if (v === '' || isNaN(+v)) { if (attrs && attrs.required) return; delete o[k]; } else o[k] = +v;
+        if (after) after(o[k]);
+        check(); changed(false);
+      });
+      return e;
+    }
+    function txt(o, k, ph, cls) {
+      var e = h('input', { type: 'text', placeholder: ph, class: cls || null });
+      e.value = o[k] == null ? '' : o[k];
+      e.addEventListener('input', function () {
+        if (e.value === '') delete o[k]; else o[k] = e.value;
+        check(); changed(false);
+      });
+      return trackFocus(e);
+    }
+    function sel(o, k, options, def) {
+      var e = h('select');
+      options.forEach(function (x) { e.appendChild(h('option', { value: x[0], text: x[1] })); });
+      e.value = o[k] != null ? String(o[k]) : def;
+      e.addEventListener('change', function () {
+        if (e.value === def) delete o[k]; else o[k] = e.value;
+        check(); changed(true);
+      });
+      return e;
+    }
+    var size = g.size = Array.isArray(g.size) ? g.size : [6, 6];
+    var numbersEvery = { v: g.x.numbers === false ? '' : g.x.numbers != null ? g.x.numbers : (g.x.grid || 1) };
+    box.appendChild(h('div', { class: 'row' },
+      h('span', { class: 'sub-title', text: 'Graph' }),
+      field('x from', num(g.x, 'min', { required: true })), field('to', num(g.x, 'max', { required: true })),
+      field('y from', num(g.y, 'min', { required: true })), field('to', num(g.y, 'max', { required: true })),
+      field('Numbers every', num(numbersEvery, 'v', { min: 0, placeholder: 'none' }, function (v) {
+        g.x.numbers = v == null ? false : v; g.y.numbers = v == null ? false : v;
+      })),
+      field('Width (cm)', num(size, 0, { min: 2, max: 18, required: true })),
+      field('Height (cm)', num(size, 1, { min: 2, max: 22, required: true })),
+      field('Axes', sel(g, 'axes', [['zero', 'Cross at 0'], ['edge', 'Bottom and left'], ['none', 'None']], 'zero')),
+      field('Place', sel(g, 'place', [['below', 'Below the text'], ['right', 'Right of the text'], ['left', 'Left of the text']], 'below')),
+      h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Grid', function () { return g.grid !== false; },
+        function (v) { if (v) delete g.grid; else g.grid = false; })),
+      h('button', { class: 'btn small danger', text: 'Remove graph', onclick: function () {
+        snapshot(); delete obj[key]; changed(true);
+      } })));
+    box.appendChild(h('div', { class: 'row' },
+      field('x name', txt(g.x, 'label', 'x'), 'small'), field('x title (units)', txt(g.x, 'title', 'e.g. Time (h)'), 'grow'),
+      field('y name', txt(g.y, 'label', 'y'), 'small'), field('y title (units)', txt(g.y, 'title', 'e.g. Distance (km)'), 'grow'),
+      field('Title above', txt(g, 'title', 'optional'), 'grow')));
+
+    g.items = Array.isArray(g.items) ? g.items : [];
+    var list = h('div', { class: 'graph-items' });
+    g.items.forEach(function (it, n) {
+      var row = h('div', { class: 'graph-item' });
+      var keyBox = h('label', { class: 'check', title: 'Only the teacher key (and "Show answers") shows it' },
+        (function () {
+          var c = h('input', { type: 'checkbox' });
+          c.checked = !!it.key;
+          c.addEventListener('change', function () { if (c.checked) it.key = true; else delete it.key; changed(true); });
+          return c;
+        })(), 'Answer only');
+      if (it.type === 'function') {
+        row.appendChild(field('y =', txt(it, 'expr', 'e.g. 2x+1, -1/2x+3, x^2-4', 'mono'), 'grow'));
+        row.appendChild(field('Label', txt(it, 'label', 'e.g. $y=2x+1$')));
+        row.appendChild(field('Line', sel(it, 'style', [['solid', 'Solid'], ['dashed', 'Dashed']], 'solid')));
+      } else if (it.type === 'points') {
+        var pin = h('input', { type: 'text', class: 'mono', placeholder: '(0, 1)  (1, 3)  A(2, 5)' });
+        pin.value = pointsText(it.points);
+        pin.addEventListener('input', function () { it.points = parsePoints(pin.value); check(); changed(false); });
+        row.appendChild(field('Points', trackFocus(pin), 'grow'));
+        row.appendChild(field('Join', sel(it, 'join', [['none', 'Not joined'], ['segments', 'Straight pieces'], ['smooth', 'Smooth curve']], 'none')));
+        row.appendChild(field('Dots', sel(it, 'dots', [['closed', 'Filled'], ['open', 'Hollow'], ['none', 'None']], 'closed')));
+      } else {
+        row.appendChild(h('span', { class: 'hint', text: (it.type || 'Item') + ' (edit it in the file)' }));
+      }
+      row.appendChild(h('div', { class: 'field' }, h('span', { text: ' ' }), keyBox));
+      row.appendChild(h('button', { class: 'btn icon danger', title: 'Remove', text: '✕', onclick: function () {
+        snapshot(); g.items.splice(n, 1); changed(true);
+      } }));
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+    box.appendChild(h('div', { class: 'row' },
+      h('button', { class: 'btn small', text: '+ Line or curve', onclick: function () {
+        snapshot(); g.items.push({ type: 'function', expr: 'x' }); changed(true);
+      } }),
+      h('button', { class: 'btn small', text: '+ Points', onclick: function () {
+        snapshot(); g.items.push({ type: 'points', points: [] }); changed(true);
+      } })));
+    box.appendChild(msg);
+    check();
+    return box;
   }
 
   function focusLastPart(q) {
