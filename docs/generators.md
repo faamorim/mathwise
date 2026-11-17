@@ -116,6 +116,16 @@ brackets), then one layer per line (everything whose inputs are already numbers)
 $x^{-n}=\frac{1}{x^n}$ and small powers written out ($(-2)^3=(-2)(-2)(-2)$) as their
 own lines. Example recipe: `examples/recipes/math9-substitution-and-sci-practice.json`.
 
+### Fact families (give two, ask the third)
+
+A **family** story is one relation, product = factor × factor (distance = speed × time),
+kept as separate pieces: for each quantity, a sentence that gives it and a question that
+asks for it. The story gives two pieces and asks for the third, so the same story is a
+multiplication (ask for the product) or a division (ask for either factor). Its *What is
+asked* setting picks which; switching it never changes the numbers. Format at the top of
+`generators/data/stories-families.js`; stories so far: `sci.sunlight` (NASA data),
+`sci.spacecraft`, `sci.bacteria-line`, `sci.sand-bucket`.
+
 ## Graphs
 
 Generators can give a `graph` with an item: the plane, and what is on it, in the
