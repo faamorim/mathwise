@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "type": "worksheet",
+  "title": "Math 9 Scientific Notation: Give Two, Find the Third",
+  "header": { "fields": ["name", "date"], "showGrade": false, "custom": [], "repeat": false },
+  "footer": { "pageNumbers": true },
+  "answers": { "handout": "none", "key": "worked" },
+  "paper": "letter",
+  "seed": "families-1",
+  "blocks": [
+    { "kind": "question", "generator": { "name": "sci.sunlight", "params": { "find": ["distance"] } } },
+    { "kind": "question", "generator": { "name": "sci.sunlight", "params": { "find": ["time"] } } },
+    { "kind": "question", "generator": { "name": "sci.spacecraft", "params": { "find": ["time"] } } },
+    { "kind": "question", "generator": { "name": "sci.bacteria-line", "params": { "find": ["count"] } } },
+    { "kind": "question", "generator": { "name": "sci.sand-bucket", "params": { "find": ["total"] } } }
+  ]
+}
