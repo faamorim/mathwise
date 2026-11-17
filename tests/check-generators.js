@@ -45,6 +45,7 @@ function givenIn(prompt) {
   if (m) m[1].split(/,\\ |,/).forEach((kv) => { const [k, v] = kv.split('='); given[k.trim()] = Number(v); });
   return given;
 }
+const evaluateTex = (t) => { try { return require('./tex-check').evaluate(t, {}); } catch (e) { return null; } };
 let items = 0, checked = 0;
 const fails = [];
 for (const gen of G.list()) {
@@ -254,6 +255,36 @@ for (const gen of G.list()) {
     assert.ok(/^\$[1-9](\.\d*[1-9])?\\times10\^/.test(r.answer), 'scientific notation answer ' + r.answer);
   }
   assert.ok(G.checkVars('sci.multiply-divide', { op: 'divide', digits1: '1', exponent1: 2, digits2: '3', exponent2: 1 })[0].includes('do not divide'));
+}
+
+// Fact-family stories: any of the three can be asked; the answer agrees with the givens
+// (product = factor x factor, within rounding) and the steps' numbers are right.
+{
+  const fams = (MW.data.stories || []).filter((s) => s.family);
+  assert.ok(fams.length >= 4, 'family stories');
+  const sciVal = (t) => { const m = /([\d.]+)\\times10\^\{?(-?\d+)\}?/.exec(t); return m && Number(m[1]) * Math.pow(10, Number(m[2])); };
+  for (const st of fams) {
+    const name = st.topic + '.' + st.id, keys = [st.family.product].concat(st.family.factors);
+    for (let seed = 0; seed < 120; seed++) {
+      const find = keys[seed % 3];
+      const b = G.fillBlock({ kind: 'question', generator: { name, params: { find: [find] }, seed: 'fam' + seed } });
+      const givens = (b.prompt.match(/\$[^$]*\$/g) || []).map(sciVal);
+      assert.strictEqual(givens.length, 2, name + ' gives two numbers: ' + b.prompt);
+      const got = sciVal(b.parts[0].answer);
+      const want = find === st.family.product ? givens[0] * givens[1] : Math.max(...givens) / Math.min(...givens);
+      // Dividing: the product is the larger given only when the factor is above 1, so compare both ways.
+      const alt = find === st.family.product ? want : Math.min(...givens) / Math.max(...givens);
+      if (!(Math.abs(got - want) / want < 0.006 || Math.abs(got - alt) / alt < 0.006)) fails.push(name + ' seed fam' + seed + ' find ' + find + ': ' + b.parts[0].answer + ' from ' + b.prompt);
+      assert.ok(!/10\^\{0\}/.test(b.prompt), name + ' has 10^0');
+      // Every "= a x 10^n" line in the steps has the same value as the answer (within rounding).
+      b.parts[0].solution.split('\n').forEach((line) => {
+        if (!/^\$[=\\]/.test(line) || /dfrac|\)\(|\)\\times\(/.test(line)) return;
+        const tex = line.replace(/^\$(=|\\approx)\s*/, '').replace(/\$$/, '');
+        const val = evaluateTex(tex);
+        if (val != null && Math.abs(val - got) / got > 0.006) fails.push(name + ' step ' + line + ' is not ' + b.parts[0].answer);
+      });
+    }
+  }
 }
 
 // Friendly messages for vars that do not fit.

@@ -24,6 +24,7 @@
     'data/planets.js',
     'data/stories-rates.js',
     'data/stories-space.js',
+    'data/stories-families.js',
     'stories.js'
   ];
   var MW = root.Mathwise = root.Mathwise || {};
