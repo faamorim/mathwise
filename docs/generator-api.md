@@ -111,6 +111,17 @@ own `generator.seed` wins; otherwise `"<doc seed>/<block number>"` (block number
 Changing any of this changes the numbers of every saved quiz.
 A block with a `template` (section 6) instead of a `generator` is rendered from its vars.
 
+**Booklet options** (agreed 2026-11-17): `fillBlock` and `fillDocument` also take
+`thinking: { frequency }`, a number from 0 to 1. `fillDocument` reads it from the
+document's `thinking` field (`"thinking": { "frequency": 0.25 }`, stored by the editor).
+A generator whose `thinking` setting is `auto` uses it to decide, from its own random
+stream, whether this question gets a thinking question; the frequency never changes a
+question's numbers. Blocks set to anything but `auto` ignore it.
+
+**No repeats in a booklet:** `fillDocument` re-rolls a question that repeats one earlier in
+the document (same prompt, or a story that would give away another question's answer),
+from the seed, so the same document still always gives the same questions.
+
 ## 5. Stored form (shared part of the worksheet schema)
 
 ```json
@@ -119,6 +130,23 @@ A block with a `template` (section 6) instead of a `generator` is rendered from 
 
 `params` hold real parameter values only (never slider positions, difficulty or aspect
 names), so saved files keep working when presets are retuned. `seed` is optional.
+
+## 5b. Shared setting keys (agreed 2026-11-17)
+
+Every generator that offers one of these settings uses exactly this key, type and meaning,
+so a page can change it on every block at once ("Set all precisions") without knowing
+the generator. The same keys are used for the vars of an unlinked question.
+
+| Key | Type | Values | Meaning |
+| --- | --- | --- | --- |
+| `precision` | number | 0 to 6 | How to round: significant digits in a scientific notation question, decimal places everywhere else. The question says which. |
+| `showPrecision` | toggle | default on | Say the precision in the question ("Round to 2 decimal places."). Off hides that sentence. |
+| `thinking` | choice | `auto` (default), `none`, `random`, or a thinking question's id | Whether a thinking (open-ended) question follows: `auto` follows the booklet frequency, `random` always adds one picked by the seed, an id adds that one. Ids are stable: rewording a question keeps its id. |
+
+- A per-part override of `precision` in an unlinked question is a `choice` var whose
+  first option is `""` ("same as the question"), never a missing key.
+- Old files: a `thinking` value of `true` is read as `auto` and `false` as `none` by the
+  library (in `validate`, `defaults` and `fillBlock`), so pages never see the old on/off form.
 
 ## 6. Question templates: `variables`, `pick`, `render`
 
