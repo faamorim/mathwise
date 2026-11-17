@@ -40,7 +40,17 @@
     delete copy.parts; delete copy.answer; delete copy.solution;
     var gen = genOf(b);
     if (gen && !gen.whole && b.prompt != null && b.prompt !== '') copy.prompt = b.prompt; else delete copy.prompt;
-    return lib().fillBlock(copy, { docSeed: doc.seed, blockNumber: i + 1 });
+    return lib().fillBlock(copy, fillOpts(doc, i));
+  }
+
+  // Options every fill of block i gets: the document seed, its number, booklet options.
+  function fillOpts(doc, i) {
+    var o = { docSeed: doc.seed, blockNumber: i + 1 };
+    if (doc.thinking && typeof doc.thinking.frequency === 'number') o.thinking = { frequency: doc.thinking.frequency };
+    // No repeats in a booklet: the library re-rolls a part that repeats (or gives away)
+    // one in the questions above, so the editor gives the same booklet as tools/generate.js.
+    o.earlier = doc.blocks.slice(0, i);
+    return o;
   }
 
   function items(b) {
@@ -78,14 +88,18 @@
   // Replace block i's questions with what its generator makes (after a seed or
   // settings change). The block object is updated in place so the editor keeps
   // its card open; the teacher's layout and marks are kept.
-  function regenerate(doc, i) {
+  function regenerate(doc, i, alone) {
     var b = doc.blocks[i];
+    // Questions below can depend on this one (no repeats): fill again the ones that
+    // still show what their generator makes, so they never look changed by hand.
+    var later = alone ? [] : doc.blocks.map(function (x, j) { return j > i && isGenerated(x) && inSync(doc, j); });
     var fresh = build(doc, i);
     var keep = ['label', 'numbered', 'marks', 'space', 'columns', 'boxed', 'lined', 'id'];
     keep.forEach(function (k) { if (b[k] !== undefined) fresh[k] = b[k]; });
     if (Array.isArray(fresh.parts)) keepPartFields(b.parts, fresh.parts);
     Object.keys(b).forEach(function (k) { delete b[k]; });
     Object.keys(fresh).forEach(function (k) { b[k] = fresh[k]; });
+    later.forEach(function (was, j) { if (was) { try { regenerate(doc, j, true); } catch (e) { /* keep it */ } } });
     return b;
   }
 
@@ -110,6 +124,61 @@
       regenerate(doc, i);
     });
     return skipped;
+  }
+
+  // ---------- booklet-wide settings (docs/generator-api.md, 5b) ----------
+
+  // Does block b offer setting `key` (a generator param, or an unlinked var)?
+  function offers(b, key) {
+    var d = isGenerated(b) ? genOf(b) : isTemplateBlock(b) ? templateOf(b) : null;
+    if (!d) return false;
+    var list = isGenerated(b) ? d.params : d.variables;
+    return (list || []).some(function (x) { return x.key === key; });
+  }
+  function anyOffers(doc, key) {
+    return available() && doc.blocks.some(function (b) { return offers(b, key); });
+  }
+
+  // Booklet frequency of thinking questions (null = the generators' default).
+  // Questions without hand edits are filled again; their numbers never change.
+  // Returns how many were left alone because they were changed by hand.
+  function setThinkingFrequency(doc, f) {
+    var synced = doc.blocks.map(function (b, i) { return isGenerated(b) && offers(b, 'thinking') && inSync(doc, i); });
+    if (f == null) delete doc.thinking; else doc.thinking = { frequency: f };
+    var skipped = 0;
+    doc.blocks.forEach(function (b, i) {
+      if (!isGenerated(b) || !offers(b, 'thinking')) return;
+      if (!synced[i]) { skipped++; return; }
+      regenerate(doc, i);
+    });
+    return skipped;
+  }
+
+  // Set one shared setting (precision, showPrecision) on every question that offers it:
+  // a param of generated questions, a value of unlinked ones (parts with their own
+  // override keep it). Returns { changed, skipped } (skipped = changed by hand).
+  function setAll(doc, key, value) {
+    var res = { changed: 0, skipped: 0 };
+    var synced = doc.blocks.map(function (b, i) { return isGenerated(b) && inSync(doc, i); });
+    doc.blocks.forEach(function (b, i) {
+      if (!offers(b, key)) return;
+      if (isGenerated(b)) {
+        if (!synced[i]) { res.skipped++; return; }
+        b.generator.params = b.generator.params || {};
+        b.generator.params[key] = value;
+        try { regenerate(doc, i); res.changed++; } catch (e) { res.skipped++; }
+        return;
+      }
+      var touched = false;
+      templateItems(b).forEach(function (it) {
+        if (!it.tv.vars || !(key in it.tv.vars) || it.tv.vars[key] === value) return;
+        var v = JSON.parse(JSON.stringify(it.tv.vars));
+        v[key] = value;
+        if ((setVars(b, it, v) || []).length) res.skipped++; else touched = true;
+      });
+      if (touched) res.changed++;
+    });
+    return res;
   }
 
   // The document as it is saved: generated blocks that match their generator lose their parts.
@@ -154,7 +223,7 @@
   // The block object is updated in place (the editor keeps its card open).
   function unlink(doc, i) {
     var b = doc.blocks[i];
-    var fresh = lib().unlink(b, { docSeed: doc.seed, blockNumber: i + 1 });
+    var fresh = lib().unlink(b, fillOpts(doc, i));
     if (Array.isArray(fresh.parts)) keepPartFields(b.parts, fresh.parts);
     Object.keys(b).forEach(function (k) { delete b[k]; });
     Object.keys(fresh).forEach(function (k) { b[k] = fresh[k]; });
@@ -293,6 +362,11 @@
     seedOf: seedOf,
     inSync: inSync,
     fillEmpty: fillEmpty,
+    fillOpts: fillOpts,
+    offers: offers,
+    anyOffers: anyOffers,
+    setThinkingFrequency: setThinkingFrequency,
+    setAll: setAll,
     regenerate: regenerate,
     reroll: reroll,
     rerollAll: rerollAll,

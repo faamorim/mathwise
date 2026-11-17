@@ -99,6 +99,8 @@
     doc.answers = a;
     if (doc.paper !== 'a4') doc.paper = 'letter';
     if (doc.theme != null && (typeof doc.theme !== 'object' || Array.isArray(doc.theme))) delete doc.theme;
+    if (doc.thinking != null && !(doc.thinking && typeof doc.thinking.frequency === 'number' &&
+        doc.thinking.frequency > 0 && doc.thinking.frequency <= 1)) delete doc.thinking;   // missing = 0
     if (!Array.isArray(doc.blocks)) doc.blocks = [];
     doc.blocks = doc.blocks.filter(function (b) {
       return b && BLOCK_KINDS.indexOf(b.kind) >= 0;

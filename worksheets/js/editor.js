@@ -256,6 +256,7 @@
       h('div', { class: 'row' },
         checkbox('Compact: no work space (students work on separate paper)', function () { return !!doc.compact; },
           function (v) { if (v) doc.compact = true; else delete doc.compact; })),
+      generatedSettingsRow(doc),
       h('div', { class: 'row' },
         checkbox('Page numbers ("1 out of 3")', function () { return doc.footer.pageNumbers; },
           function (v) { doc.footer.pageNumbers = v; }),
@@ -333,6 +334,69 @@
     heading: 'Heading', text: 'Text', example: 'Example', question: 'Question',
     table: 'Table', image: 'Image', notes: 'My notes', pageBreak: 'Page break'
   };
+
+  // Settings shared by generated questions (docs/generator-api.md, 5b): only shown
+  // when some question in the booklet offers them.
+  function generatedSettingsRow(doc) {
+    var G = WS.generated;
+    if (!G || !G.available()) return null;
+    var hasThinking = G.anyOffers(doc, 'thinking');
+    var hasPrecision = G.anyOffers(doc, 'precision');
+    var hasShow = G.anyOffers(doc, 'showPrecision');
+    if (!hasThinking && !hasPrecision && !hasShow) return null;
+    function report(skipped, what) {
+      if (skipped) alert(skipped + (skipped === 1 ? ' question was' : ' questions were') +
+        ' changed by hand, so ' + what + ' was not changed there. Use its own settings (or New seed) to change it.');
+    }
+    var row = h('div', { class: 'row gen-doc-settings' });
+    if (hasThinking) {
+      var f = h('select', { title: 'For story questions whose Thinking question setting is Auto. Numbers never change.' });
+      [['', 'None'], ['0.25', '1 in 4 questions'], ['0.5', '1 in 2 questions'], ['1', 'Every question']]
+        .forEach(function (o) { f.appendChild(h('option', { value: o[0], text: o[1] })); });
+      f.value = doc.thinking ? String(doc.thinking.frequency) : '';
+      if (f.selectedIndex < 0) {
+        f.appendChild(h('option', { value: String(doc.thinking.frequency), text: Math.round(doc.thinking.frequency * 100) + '% of questions' }));
+        f.value = String(doc.thinking.frequency);
+      }
+      f.addEventListener('change', function () {
+        snapshot();
+        var skipped = 0;
+        try { skipped = G.setThinkingFrequency(doc, f.value === '' ? null : +f.value); } catch (e) { alert(e.message || e); }
+        changed(true);
+        report(skipped, 'its thinking question');
+      });
+      row.appendChild(field('Thinking questions (Auto)', f));
+    }
+    if (hasPrecision) {
+      var p = h('input', { type: 'number', min: 0, max: 6, step: 1, class: 'count', placeholder: '2',
+        title: 'Decimal places (significant digits in scientific notation questions)' });
+      row.appendChild(field('Set all precisions', h('span', { class: 'inline' }, p, ' ',
+        h('button', { class: 'btn small', text: 'Apply to all', onclick: function () {
+          var v = Math.round(+p.value);
+          if (p.value === '' || !(v >= 0 && v <= 6)) { alert('Precision is a whole number from 0 to 6.'); return; }
+          snapshot();
+          var r = G.setAll(doc, 'precision', v);
+          changed(true);
+          report(r.skipped, 'the precision');
+        } }))));
+    }
+    if (hasShow) {
+      ['Show', 'Hide'].forEach(function (label) {
+        row.appendChild(h('div', { class: 'field' }, h('span', { text: label === 'Show' ? 'Precision sentence' : ' ' }),
+          h('button', { class: 'btn small', text: label + ' in all',
+            title: label === 'Show' ? 'Every question says how to round ("Round to 2 decimal places.")'
+              : 'Hide it everywhere, e.g. to write one instruction for the whole booklet in a text block',
+            onclick: function () {
+              snapshot();
+              var r = G.setAll(doc, 'showPrecision', label === 'Show');
+              changed(true);
+              report(r.skipped, 'the precision sentence');
+            } })));
+      });
+    }
+    row.appendChild(h('p', { class: 'muted hint', text: 'Questions you unlinked follow these too; questions changed by hand keep their text.' }));
+    return row;
+  }
 
   function summaryOf(b) {
     var s = '';
