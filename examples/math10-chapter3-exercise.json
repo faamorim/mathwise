@@ -1,0 +1,567 @@
+{
+  "schemaVersion": 1,
+  "type": "worksheet",
+  "title": "Math 10  Chapter 3 Exercise",
+  "header": {
+    "fields": [
+      "name",
+      "date"
+    ],
+    "showGrade": false,
+    "custom": [],
+    "repeat": false
+  },
+  "footer": {
+    "pageNumbers": true
+  },
+  "defaultMarks": 1,
+  "answers": {
+    "handout": "none",
+    "key": "final"
+  },
+  "paper": "letter",
+  "blocks": [
+    {
+      "kind": "text",
+      "content": "Complete the following questions. **SHOW ALL STEPS** on a separate piece of paper."
+    },
+    {
+      "kind": "heading",
+      "text": "__Part 1 - Prime Numbers__",
+      "size": "s"
+    },
+    {
+      "kind": "question",
+      "prompt": "Fill in the blanks.",
+      "boxed": false,
+      "space": 0,
+      "parts": [
+        {
+          "prompt": "Prime numbers are numbers that have [[line-s: two]] factors, [[line-s: 1]] and themselves."
+        },
+        {
+          "prompt": "Write down the first 10 prime numbers: [[line-l]]",
+          "answer": "2, 3, 5, 7, 11, 13, 17, 19, 23, 29"
+        },
+        {
+          "prompt": "Cross out the numbers that are NOT prime numbers: 1, 2, 3, 5, 6, 7, 8, 11, 12, 13",
+          "answer": "Cross out 1, 6, 8, 12"
+        }
+      ]
+    },
+    {
+      "kind": "heading",
+      "text": "__Part 2 - Finding Factors and Multiples__",
+      "size": "s"
+    },
+    {
+      "kind": "question",
+      "prompt": "Find all the factors of:",
+      "boxed": false,
+      "space": 0,
+      "parts": [
+        {
+          "prompt": "12: [[line-l]]",
+          "answer": "1, 2, 3, 4, 6, 12"
+        },
+        {
+          "prompt": "45: [[line-l]]",
+          "answer": "1, 3, 5, 9, 15, 45"
+        },
+        {
+          "prompt": "64: [[line-l]]",
+          "answer": "1, 2, 4, 8, 16, 32, 64"
+        },
+        {
+          "prompt": "17: [[line-l]]",
+          "answer": "1, 17"
+        },
+        {
+          "prompt": "124: [[line-l]]",
+          "answer": "1, 2, 4, 31, 62, 124"
+        },
+        {
+          "prompt": "256: [[line-l]]",
+          "answer": "1, 2, 4, 8, 16, 32, 64, 128, 256"
+        }
+      ]
+    },
+    {
+      "kind": "question",
+      "prompt": "Find the first 6 multiples of:",
+      "boxed": false,
+      "space": 0,
+      "parts": [
+        {
+          "prompt": "12: [[line-l]]",
+          "answer": "12, 24, 36, 48, 60, 72"
+        },
+        {
+          "prompt": "45: [[line-l]]",
+          "answer": "45, 90, 135, 180, 225, 270"
+        },
+        {
+          "prompt": "64: [[line-l]]",
+          "answer": "64, 128, 192, 256, 320, 384"
+        },
+        {
+          "prompt": "17: [[line-l]]",
+          "answer": "17, 34, 51, 68, 85, 102"
+        },
+        {
+          "prompt": "124: [[line-l]]",
+          "answer": "124, 248, 372, 496, 620, 744"
+        },
+        {
+          "prompt": "256: [[line-l]]",
+          "answer": "256, 512, 768, 1024, 1280, 1536"
+        }
+      ]
+    },
+    {
+      "kind": "heading",
+      "text": "__Part 3 - Common Factors and Common Multiples__",
+      "size": "s"
+    },
+    {
+      "kind": "question",
+      "prompt": "Find all the common factors of:",
+      "boxed": false,
+      "space": 0,
+      "parts": [
+        {
+          "prompt": "16, 80: [[line-l]]",
+          "answer": "1, 2, 4, 8, 16"
+        },
+        {
+          "prompt": "12, 16: [[line-l]]",
+          "answer": "1, 2, 4"
+        },
+        {
+          "prompt": "50, 100: [[line-l]]",
+          "answer": "1, 2, 5, 10, 25, 50"
+        },
+        {
+          "prompt": "36, 72, 80: [[line-l]]",
+          "answer": "1, 2, 4"
+        },
+        {
+          "prompt": "6, 12, 18: [[line-l]]",
+          "answer": "1, 2, 3, 6"
+        },
+        {
+          "prompt": "32, 64, 128: [[line-l]]",
+          "answer": "1, 2, 4, 8, 16, 32"
+        }
+      ]
+    },
+    {
+      "kind": "question",
+      "prompt": "Find the first 5 common multiples of:",
+      "boxed": false,
+      "space": 0,
+      "parts": [
+        {
+          "prompt": "6, 12: [[line-l]]",
+          "answer": "12, 24, 36, 48, 60"
+        },
+        {
+          "prompt": "3, 9: [[line-l]]",
+          "answer": "9, 18, 27, 36, 45"
+        },
+        {
+          "prompt": "50, 100: [[line-l]]",
+          "answer": "100, 200, 300, 400, 500"
+        },
+        {
+          "prompt": "24, 48, 96: [[line-l]]",
+          "answer": "96, 192, 288, 384, 480"
+        },
+        {
+          "prompt": "6, 12, 18: [[line-l]]",
+          "answer": "36, 72, 108, 144, 180"
+        },
+        {
+          "prompt": "32, 64, 128: [[line-l]]",
+          "answer": "128, 256, 384, 512, 640"
+        }
+      ]
+    },
+    {
+      "kind": "heading",
+      "text": "__Highest Common Factor and Least Common Multiples__",
+      "size": "s"
+    },
+    {
+      "kind": "question",
+      "prompt": "Find the H.C.F. and L.C.M. of:",
+      "boxed": false,
+      "space": 0,
+      "parts": [
+        {
+          "prompt": "12, 14   H.C.F.: [[line-s]]   L.C.M.: [[line-s]]",
+          "answer": "H.C.F. 2, L.C.M. 84"
+        },
+        {
+          "prompt": "18, 64   H.C.F.: [[line-s]]   L.C.M.: [[line-s]]",
+          "answer": "H.C.F. 2, L.C.M. 576"
+        },
+        {
+          "prompt": "32, 96   H.C.F.: [[line-s]]   L.C.M.: [[line-s]]",
+          "answer": "H.C.F. 32, L.C.M. 96"
+        },
+        {
+          "prompt": "15, 25   H.C.F.: [[line-s]]   L.C.M.: [[line-s]]",
+          "answer": "H.C.F. 5, L.C.M. 75"
+        },
+        {
+          "prompt": "25, 50, 75   H.C.F.: [[line-s]]   L.C.M.: [[line-s]]",
+          "answer": "H.C.F. 25, L.C.M. 150"
+        },
+        {
+          "prompt": "10, 20, 30   H.C.F.: [[line-s]]   L.C.M.: [[line-s]]",
+          "answer": "H.C.F. 10, L.C.M. 60"
+        },
+        {
+          "prompt": "30, 45, 90   H.C.F.: [[line-s]]   L.C.M.: [[line-s]]",
+          "answer": "H.C.F. 15, L.C.M. 90"
+        },
+        {
+          "prompt": "75, 80, 85   H.C.F.: [[line-s]]   L.C.M.: [[line-s]]",
+          "answer": "H.C.F. 5, L.C.M. 20400"
+        }
+      ]
+    },
+    {
+      "kind": "pageBreak"
+    },
+    {
+      "kind": "heading",
+      "text": "__Expanding__",
+      "size": "s"
+    },
+    {
+      "kind": "question",
+      "prompt": "Expand using the rainbow method, then simplify if needed.",
+      "boxed": false,
+      "space": 0.9,
+      "parts": [
+        {
+          "prompt": "$2x(6y) =$",
+          "answer": "$12xy$"
+        },
+        {
+          "prompt": "$5x^5(6x^8) =$",
+          "answer": "$30x^{13}$"
+        },
+        {
+          "prompt": "$(3x+1)(5x-2) =$",
+          "answer": "$15x^2-x-2$"
+        },
+        {
+          "prompt": "$(-6x-2)(3y^2+3) =$",
+          "answer": "$-18xy^2-18x-6y^2-6$"
+        },
+        {
+          "prompt": "$2x(x^2+3x-6) =$",
+          "answer": "$2x^3+6x^2-12x$"
+        },
+        {
+          "prompt": "$3x(12y^3+4y^2+4) =$",
+          "answer": "$36xy^3+12xy^2+12x$"
+        },
+        {
+          "prompt": "$5x^5y(2x^3y^2-3xy+2) =$",
+          "answer": "$10x^8y^3-15x^6y^2+10x^5y$"
+        },
+        {
+          "prompt": "$(2x+1)(3x^2+3x-5) =$",
+          "answer": "$6x^3+9x^2-7x-5$"
+        },
+        {
+          "prompt": "$(5y+2x-4)(12x+3y+9) =$",
+          "answer": "$24x^2+66xy-30x+15y^2+33y-36$"
+        },
+        {
+          "prompt": "$(a^2b^3c^2+2a)(12a^2b^3-2ab^2c) =$",
+          "answer": "$12a^4b^6c^2-2a^3b^5c^3+24a^3b^3-4a^2b^2c$"
+        },
+        {
+          "prompt": "$(4x-2)(3x+1)-(9y-3)(2y^2-5) =$",
+          "answer": "$12x^2-2x-18y^3+6y^2+45y-17$"
+        },
+        {
+          "prompt": "$(12x^5-2x^3+2)(2x)-(3x)(5x^5+6x^3-7) =$",
+          "answer": "$9x^6-22x^4+25x$"
+        }
+      ]
+    },
+    {
+      "kind": "pageBreak"
+    },
+    {
+      "kind": "heading",
+      "text": "__Factoring__",
+      "size": "s"
+    },
+    {
+      "kind": "question",
+      "prompt": "Factor by extracting the common term.",
+      "boxed": false,
+      "space": 0.75,
+      "parts": [
+        {
+          "prompt": "$12x+6y-3z =$",
+          "answer": "$3(4x+2y-z)$"
+        },
+        {
+          "prompt": "$36x^2-4x+2xy =$",
+          "answer": "$2x(18x-2+y)$"
+        },
+        {
+          "prompt": "$12x^2-6x^5+3x^4 =$",
+          "answer": "$3x^2(4-2x^3+x^2)$"
+        },
+        {
+          "prompt": "$-81a^2+9a-3 =$",
+          "answer": "$-3(27a^2-3a+1)$"
+        },
+        {
+          "prompt": "$x^2y^3-xy^2+xy =$",
+          "answer": "$xy(xy^2-y+1)$"
+        },
+        {
+          "prompt": "$19x^2y^3z^8+2x^3y^3-xy^8 =$",
+          "answer": "$xy^3(19xz^8+2x^2-y^5)$"
+        }
+      ]
+    },
+    {
+      "kind": "question",
+      "prompt": "Factor using the cross method. (Remember to extract any common terms first!)",
+      "boxed": false,
+      "space": 0.75,
+      "parts": [
+        {
+          "prompt": "$x^2+4x-32 =$",
+          "answer": "$(x+8)(x-4)$"
+        },
+        {
+          "prompt": "$12x^2+5x-2 =$",
+          "answer": "$(3x+2)(4x-1)$"
+        },
+        {
+          "prompt": "$3x^2-3x-90 =$",
+          "answer": "$3(x-6)(x+5)$"
+        },
+        {
+          "prompt": "$-2x^3-6x^2+56x =$",
+          "answer": "$-2x(x+7)(x-4)$"
+        },
+        {
+          "prompt": "$6x^2-11x+4 =$",
+          "answer": "$(2x-1)(3x-4)$"
+        },
+        {
+          "prompt": "$15x^2+14x-8 =$",
+          "answer": "$(3x+4)(5x-2)$"
+        },
+        {
+          "prompt": "$24x^2y+34xy+12y =$",
+          "answer": "$2y(3x+2)(4x+3)$"
+        },
+        {
+          "prompt": "$5x^2-50x+120 =$",
+          "answer": "$5(x-4)(x-6)$"
+        },
+        {
+          "prompt": "$9x^2+12x+4 =$",
+          "answer": "$(3x+2)^2$"
+        }
+      ]
+    },
+    {
+      "kind": "pageBreak"
+    },
+    {
+      "kind": "heading",
+      "text": "__Special Polynomials__",
+      "size": "s"
+    },
+    {
+      "kind": "question",
+      "prompt": "Complete the formulas. (Remember to memorize them!)",
+      "boxed": false,
+      "columns": 2,
+      "space": 0.6,
+      "parts": [
+        {
+          "label": "a",
+          "prompt": "$(a+b)^2 =$",
+          "answer": "$a^2+2ab+b^2$"
+        },
+        {
+          "label": "d",
+          "prompt": "$a^2+2ab+b^2 =$",
+          "answer": "$(a+b)^2$"
+        },
+        {
+          "label": "b",
+          "prompt": "$(a-b)^2 =$",
+          "answer": "$a^2-2ab+b^2$"
+        },
+        {
+          "label": "e",
+          "prompt": "$a^2-2ab+b^2 =$",
+          "answer": "$(a-b)^2$"
+        },
+        {
+          "label": "c",
+          "prompt": "$(a+b)(a-b) =$",
+          "answer": "$a^2-b^2$"
+        },
+        {
+          "label": "f",
+          "prompt": "$a^2-b^2 =$",
+          "answer": "$(a+b)(a-b)$"
+        }
+      ]
+    },
+    {
+      "kind": "question",
+      "prompt": "Expand using the formulas above.",
+      "boxed": false,
+      "space": 0.7,
+      "parts": [
+        {
+          "prompt": "$(2x+6y)^2 =$",
+          "answer": "$4x^2+24xy+36y^2$"
+        },
+        {
+          "prompt": "$(3p+4q)^2 =$",
+          "answer": "$9p^2+24pq+16q^2$"
+        },
+        {
+          "prompt": "$(15m+16n)^2 =$",
+          "answer": "$225m^2+480mn+256n^2$"
+        },
+        {
+          "prompt": "$(20x+25y)^2 =$",
+          "answer": "$400x^2+1000xy+625y^2$"
+        },
+        {
+          "prompt": "$(2x-6y)^2 =$",
+          "answer": "$4x^2-24xy+36y^2$"
+        },
+        {
+          "prompt": "$(3p-4q)^2 =$",
+          "answer": "$9p^2-24pq+16q^2$"
+        },
+        {
+          "prompt": "$(15m-16n)^2 =$",
+          "answer": "$225m^2-480mn+256n^2$"
+        },
+        {
+          "prompt": "$(20x-25y)^2 =$",
+          "answer": "$400x^2-1000xy+625y^2$"
+        },
+        {
+          "prompt": "$(3x+1)(3x-1) =$",
+          "answer": "$9x^2-1$"
+        },
+        {
+          "prompt": "$(5p-6q)(5p+6q) =$",
+          "answer": "$25p^2-36q^2$"
+        },
+        {
+          "prompt": "$(12x-3y)(12x+3y) =$",
+          "answer": "$144x^2-9y^2$"
+        },
+        {
+          "prompt": "$(2x^2-3y^2)(2x^2+3y^2) =$",
+          "answer": "$4x^4-9y^4$"
+        },
+        {
+          "prompt": "$(2x+6y)^2-(3x-4y)^2 =$",
+          "answer": "$-5x^2+48xy+20y^2$"
+        }
+      ]
+    },
+    {
+      "kind": "pageBreak"
+    },
+    {
+      "kind": "question",
+      "prompt": "Factor using the formulas above.",
+      "boxed": false,
+      "space": 0.9,
+      "parts": [
+        {
+          "prompt": "$x^2+18x+81 =$",
+          "answer": "$(x+9)^2$"
+        },
+        {
+          "prompt": "$x^2+22x+121 =$",
+          "answer": "$(x+11)^2$"
+        },
+        {
+          "prompt": "$49x^2+84x+36 =$",
+          "answer": "$(7x+6)^2$"
+        },
+        {
+          "prompt": "$49x^2+14x+1 =$",
+          "answer": "$(7x+1)^2$"
+        },
+        {
+          "prompt": "$36x^2+132x+121 =$",
+          "answer": "$(6x+11)^2$"
+        },
+        {
+          "prompt": "$x^2-20x+100 =$",
+          "answer": "$(x-10)^2$"
+        },
+        {
+          "prompt": "$25x^2-120x+144 =$",
+          "answer": "$(5x-12)^2$"
+        },
+        {
+          "prompt": "$81x^2-180x+100 =$",
+          "answer": "$(9x-10)^2$"
+        },
+        {
+          "prompt": "$4x^2-12x+9 =$",
+          "answer": "$(2x-3)^2$"
+        },
+        {
+          "prompt": "$9x^2-12x+4 =$",
+          "answer": "$(3x-2)^2$"
+        },
+        {
+          "prompt": "$9x^2-1 =$",
+          "answer": "$(3x+1)(3x-1)$"
+        },
+        {
+          "prompt": "$36k^2-64 =$",
+          "answer": "$4(3k+4)(3k-4)$"
+        },
+        {
+          "prompt": "$16x^2-25b^2 =$",
+          "answer": "$(4x+5b)(4x-5b)$"
+        },
+        {
+          "prompt": "$4x^4-144y^4 =$",
+          "answer": "$4(x^2+6y^2)(x^2-6y^2)$"
+        },
+        {
+          "prompt": "$7x^4-343y^4 =$",
+          "answer": "$7(x^2+7y^2)(x^2-7y^2)$"
+        }
+      ]
+    },
+    {
+      "kind": "text",
+      "content": "~END OF EXERCISE~",
+      "align": "center"
+    }
+  ]
+}
