@@ -33,7 +33,9 @@
     return e;
   }
 
+  // Values with defaults filled in and old files brought up to date (library rule).
   function merged(gen, values) {
+    if (lib().withDefaults) return lib().withDefaults(gen, values);
     var v = lib().defaults(gen);
     Object.keys(values || {}).forEach(function (k) { v[k] = values[k]; });
     return v;
@@ -133,6 +135,7 @@
    */
   function varControls(gen, vars, onChange) {
     var cur = JSON.parse(JSON.stringify(vars || {}));
+    if (lib().upgradeVars) cur = lib().upgradeVars(gen, cur) || cur;   // old files
     var msg = h('p', { class: 'error gen-error', hidden: true });
     var row = h('div', { class: 'tmpl-vars' });
 

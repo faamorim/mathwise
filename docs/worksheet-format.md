@@ -50,6 +50,7 @@ this page explains it with examples. Full examples live in [`examples/`](../exam
 | `answers.key` | A **separate teacher key**, printed as its own document with *Print key*: `"final"` (answers only, default for quizzes), `"worked"` (each question with its worked solution and answer), `"both"` (the answers page for a quick check, then the worked solutions for students who are stuck) or `"none"` (default for worksheets). |
 | `answers.keyTitle` | `"solutions"` titles the key *Solutions* instead of *Teacher key*, for a key you hand to students. |
 | `paper` | `"letter"` or `"a4"`. |
+| `thinking` | `{ "frequency": 0.25 }`: how often story questions whose *Thinking question* setting is *Auto* get a thinking (open-ended) question, from 0 to 1. Missing = 0. Never changes the numbers. |
 
 ## Blocks
 
@@ -86,6 +87,20 @@ this page explains it with examples. Full examples live in [`examples/`](../exam
   teacher key, graphs with answers on them are drawn under the worked solution, and as small
   copies under the line on the answers page. In the editor, *+ Add a graph* (or 📈 on a part)
   edits the axes, lines and curves (`y =` …), and points (`A(2, 5)`, optionally joined).
+* **Matching cards**: `choices` puts cards A, B, C… under the prompt, each with `text`
+  and/or a `graph` (four to a row, or `choiceColumns`). Each part gets a short blank for a
+  letter and its `answer` is the right letter (extra cards are distractors). The key writes
+  the letters in the blanks and "= b)" under each card. `"cut": true` draws dashed cut-out
+  cards (cards and parts) for a card sort. In the editor: *+ Add matching cards*.
+
+### Settings for the whole booklet
+
+When some generated questions offer them (docs/generator-api.md, section 5b), *Document*
+shows **Thinking questions (Auto)** (none, 1 in 4, 1 in 2, every question), **Set all
+precisions** (0–6: decimal places, or significant digits in scientific notation) and
+**Precision sentence: Show / Hide in all** (hide it everywhere and add one text block such as
+"Round all answers to 2 decimal places"). They change generated questions and the values of
+unlinked ones; questions changed by hand keep their text.
 
 ### Tables
 

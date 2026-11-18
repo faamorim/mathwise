@@ -287,3 +287,5 @@ input.look-num { width: 5em; }
 .graph-box .field { flex: none; }
 .graph-box .field.grow { flex: 1 1 140px; }
 .graph-box .field.small input { width: 60px; }
+.choice-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 30px 26px; gap: 4px; align-items: center; margin: 3px 0; }
+.choice-row .lbl { text-align: right; font-weight: 600; color: #556; }

@@ -99,6 +99,8 @@
     doc.answers = a;
     if (doc.paper !== 'a4') doc.paper = 'letter';
     if (doc.theme != null && (typeof doc.theme !== 'object' || Array.isArray(doc.theme))) delete doc.theme;
+    if (doc.thinking != null && !(doc.thinking && typeof doc.thinking.frequency === 'number' &&
+        doc.thinking.frequency > 0 && doc.thinking.frequency <= 1)) delete doc.thinking;   // missing = 0
     if (!Array.isArray(doc.blocks)) doc.blocks = [];
     doc.blocks = doc.blocks.filter(function (b) {
       return b && BLOCK_KINDS.indexOf(b.kind) >= 0;
@@ -123,6 +125,7 @@
       if (b.parts != null && !Array.isArray(b.parts)) b.parts = null;
       if (b.parts) b.parts.forEach(function (p) { if (typeof p.prompt !== 'string') p.prompt = ''; });
       if (b.table) normalizeTable(b.table);
+      if (b.choices != null && !Array.isArray(b.choices)) delete b.choices;
     }
     if (b.kind === 'table') normalizeTable(b);
     if (b.kind === 'text' && typeof b.content !== 'string') b.content = '';

@@ -53,6 +53,11 @@
       }
     },
     "paper": { "enum": ["letter", "a4"], "default": "letter" },
+    "thinking": {
+      "type": "object",
+      "description": "Booklet options for generated story questions: how often a question set to Auto gets a thinking question (missing = 0).",
+      "properties": { "frequency": { "type": "number", "minimum": 0, "maximum": 1 } }
+    },
     "compact": { "type": "boolean", "default": false, "description": "No work space under questions or parts: students work on separate paper." },
     "theme": {
       "type": "object",
@@ -189,7 +194,21 @@
           }
         },
         "table": { "$ref": "#/$defs/tableData" },
-        "graph": { "$ref": "#/$defs/graph" }
+        "graph": { "$ref": "#/$defs/graph" },
+        "choices": {
+          "type": "array",
+          "description": "Matching cards A, B, C... shown under the prompt; each part's answer is a card's letter.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string", "description": "Replaces the automatic letter." },
+              "text": { "$ref": "#/$defs/markup" },
+              "graph": { "$ref": "#/$defs/graph" }
+            }
+          }
+        },
+        "choiceColumns": { "type": "integer", "minimum": 0, "maximum": 4, "description": "Cards per row (0 or missing: automatic)." },
+        "cut": { "type": "boolean", "description": "Dashed cut-out cards (cards and parts), for card sorts." }
       }
     },
     "table": { "$ref": "#/$defs/tableData" },

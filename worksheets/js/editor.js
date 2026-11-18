@@ -256,6 +256,7 @@
       h('div', { class: 'row' },
         checkbox('Compact: no work space (students work on separate paper)', function () { return !!doc.compact; },
           function (v) { if (v) doc.compact = true; else delete doc.compact; })),
+      generatedSettingsRow(doc),
       h('div', { class: 'row' },
         checkbox('Page numbers ("1 out of 3")', function () { return doc.footer.pageNumbers; },
           function (v) { doc.footer.pageNumbers = v; }),
@@ -333,6 +334,69 @@
     heading: 'Heading', text: 'Text', example: 'Example', question: 'Question',
     table: 'Table', image: 'Image', notes: 'My notes', pageBreak: 'Page break'
   };
+
+  // Settings shared by generated questions (docs/generator-api.md, 5b): only shown
+  // when some question in the booklet offers them.
+  function generatedSettingsRow(doc) {
+    var G = WS.generated;
+    if (!G || !G.available()) return null;
+    var hasThinking = G.anyOffers(doc, 'thinking');
+    var hasPrecision = G.anyOffers(doc, 'precision');
+    var hasShow = G.anyOffers(doc, 'showPrecision');
+    if (!hasThinking && !hasPrecision && !hasShow) return null;
+    function report(skipped, what) {
+      if (skipped) alert(skipped + (skipped === 1 ? ' question was' : ' questions were') +
+        ' changed by hand, so ' + what + ' was not changed there. Use its own settings (or New seed) to change it.');
+    }
+    var row = h('div', { class: 'row gen-doc-settings' });
+    if (hasThinking) {
+      var f = h('select', { title: 'For story questions whose Thinking question setting is Auto. Numbers never change.' });
+      [['', 'None'], ['0.25', '1 in 4 questions'], ['0.5', '1 in 2 questions'], ['1', 'Every question']]
+        .forEach(function (o) { f.appendChild(h('option', { value: o[0], text: o[1] })); });
+      f.value = doc.thinking ? String(doc.thinking.frequency) : '';
+      if (f.selectedIndex < 0) {
+        f.appendChild(h('option', { value: String(doc.thinking.frequency), text: Math.round(doc.thinking.frequency * 100) + '% of questions' }));
+        f.value = String(doc.thinking.frequency);
+      }
+      f.addEventListener('change', function () {
+        snapshot();
+        var skipped = 0;
+        try { skipped = G.setThinkingFrequency(doc, f.value === '' ? null : +f.value); } catch (e) { alert(e.message || e); }
+        changed(true);
+        report(skipped, 'its thinking question');
+      });
+      row.appendChild(field('Thinking questions (Auto)', f));
+    }
+    if (hasPrecision) {
+      var p = h('input', { type: 'number', min: 0, max: 6, step: 1, class: 'count', placeholder: '2',
+        title: 'Decimal places (significant digits in scientific notation questions)' });
+      row.appendChild(field('Set all precisions', h('span', { class: 'inline' }, p, ' ',
+        h('button', { class: 'btn small', text: 'Apply to all', onclick: function () {
+          var v = Math.round(+p.value);
+          if (p.value === '' || !(v >= 0 && v <= 6)) { alert('Precision is a whole number from 0 to 6.'); return; }
+          snapshot();
+          var r = G.setAll(doc, 'precision', v);
+          changed(true);
+          report(r.skipped, 'the precision');
+        } }))));
+    }
+    if (hasShow) {
+      ['Show', 'Hide'].forEach(function (label) {
+        row.appendChild(h('div', { class: 'field' }, h('span', { text: label === 'Show' ? 'Precision sentence' : ' ' }),
+          h('button', { class: 'btn small', text: label + ' in all',
+            title: label === 'Show' ? 'Every question says how to round ("Round to 2 decimal places.")'
+              : 'Hide it everywhere, e.g. to write one instruction for the whole booklet in a text block',
+            onclick: function () {
+              snapshot();
+              var r = G.setAll(doc, 'showPrecision', label === 'Show');
+              changed(true);
+              report(r.skipped, 'the precision sentence');
+            } })));
+      });
+    }
+    row.appendChild(h('p', { class: 'muted hint', text: 'Questions you unlinked follow these too; questions changed by hand keep their text.' }));
+    return row;
+  }
 
   function summaryOf(b) {
     var s = '';
@@ -859,6 +923,62 @@
 
     // Graph (generated questions draw their own)
     if (!generated) body.appendChild(graphBox(q, 'graph', 'this ' + (isQ ? 'question' : 'example')));
+
+    // Matching cards A, B, C... (generated matching questions make their own)
+    if (!generated) body.appendChild(choicesBox(q));
+  }
+
+  function choicesBox(q) {
+    var box = h('div', { class: 'sub choices-box' });
+    if (!Array.isArray(q.choices) || !q.choices.length) {
+      box.appendChild(h('button', { class: 'btn small', text: '+ Add matching cards (A, B, C…)', title: 'Cards to match the parts to: text, equations or graphs', onclick: function () {
+        snapshot();
+        q.choices = [{ text: '' }, { text: '' }, { text: '' }, { text: '' }];
+        if (!q.parts || !q.parts.length) q.parts = [{ prompt: '' }, { prompt: '' }, { prompt: '' }, { prompt: '' }];
+        if (!q.prompt) q.prompt = 'Match each one to a card. Write the letter.';
+        changed(true);
+      } }));
+      return box;
+    }
+    box.appendChild(h('div', { class: 'row' },
+      h('span', { class: 'sub-title', text: 'Matching cards' }),
+      field('Cards per row', selectInput(q, 'choiceColumns', [['', 'auto'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], { number: true, def: '' })),
+      h('div', { class: 'field' }, h('span', { text: ' ' }), checkbox('Cut-out cards', function () { return !!q.cut; },
+        function (v) { if (v) q.cut = true; else delete q.cut; }, 'Dashed cut lines around the cards and the parts, for card sorts')),
+      h('span', { class: 'hint', text: 'Put the right letter in each part\'s Answer.' }),
+      h('button', { class: 'btn small danger', text: 'Remove cards', onclick: function () {
+        snapshot(); delete q.choices; delete q.cut; delete q.choiceColumns; changed(true);
+      } })));
+    q.choices.forEach(function (c, n) {
+      var letter = c.label || String.fromCharCode(65 + n);
+      var row = h('div', { class: 'choice-row' },
+        h('span', { class: 'lbl', text: letter }),
+        textInput(c, 'text', { placeholder: 'text or $y=2x+1$ (optional with a graph)', emptyDeletes: true }),
+        h('button', { class: 'btn icon' + (c.graph ? ' on' : ''), text: '📈', title: 'A graph on this card', onclick: function () {
+          snapshot();
+          if (!c.graph) { c.graph = newGraph(); c.graph.size = [5, 5]; }
+          state.openGraphs.add(c);
+          changed(true);
+        } }),
+        h('button', { class: 'btn icon danger', title: 'Remove card', text: '✕', onclick: function () {
+          snapshot(); q.choices.splice(n, 1); if (!q.choices.length) delete q.choices; changed(true);
+        } }));
+      box.appendChild(row);
+      if (c.graph) {
+        // Folded: four full graph editors make a very long card.
+        var sum = (c.graph.items || []).map(function (it) {
+          return it.type === 'function' ? 'y = ' + (it.expr || '') : it.type === 'points' ? (it.points || []).length + ' points' : it.type;
+        }).join(', ') || 'empty grid';
+        box.appendChild(h('details', { class: 'part-graph', open: state.openGraphs.has(c),
+          ontoggle: function (ev) { if (ev.target.open) state.openGraphs.add(c); else state.openGraphs.delete(c); } },
+          h('summary', { text: 'Graph on card ' + letter + ': ' + sum }),
+          graphBox(c, 'graph', 'card ' + letter)));
+      }
+    });
+    box.appendChild(h('button', { class: 'btn small', text: '+ Card', onclick: function () {
+      snapshot(); q.choices.push({ text: '' }); changed(true);
+    } }));
+    return box;
   }
 
   // ---------- graphs (docs/graph-format.md; drawn by js/graph-draw.js) ----------
