@@ -151,6 +151,8 @@ for (const gen of G.list()) {
   assert.ok(G.render('sci.sunlight', { planet: 'Mars', find: 'speed', thinking: true }).parts[1].thinking, 'old vars: thinking on');
   assert.strictEqual(G.render('rates.heartbeat', { name: 'Ana', beats: 22, secs: 15, thinking: false }).parts.length, 2, 'old vars: thinking off');
   assert.ok(!G.validate(G.get('sci.sunlight'), { find: ['speed', 'time'] }).length, 'old params: a piece no longer asked');
+  assert.strictEqual(G.withDefaults(G.get('rates.hose'), { thinking: true }).thinking, 'random', 'withDefaults maps old thinking');
+  assert.strictEqual(G.upgradeVars('rates.hose', { thinking: true }).thinking, 'real-time', 'upgradeVars maps old thinking');
   // Calculation spot checks.
   const D = MW.data;
   const val = (d) => Number(MW.sci.mantissa(d.digits)) * Math.pow(10, d.exponent);

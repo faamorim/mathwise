@@ -640,6 +640,8 @@
     get: get,
     list: list,
     defaults: defaults,
+    withDefaults: withDefaults,
+    upgradeVars: function (gen, vars) { if (typeof gen === 'string') gen = get(gen); return upgradedVars(gen, vars); },
     validate: validate,
     generate: generate,
     fillBlock: fillBlock,
