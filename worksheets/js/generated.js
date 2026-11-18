@@ -282,7 +282,7 @@
       target.parts = keepPartFields(target.parts, r.parts.map(function (p) {
         var it = { prompt: p.prompt, answer: p.answer };
         if (p.steps && p.steps.length) it.solution = p.steps.join('\n');
-        if (p.thinking) it.thinking = true;
+        if (p.thinking) it.thinking = p.thinking;   // true, or the idea id ("sun.seeing-past")
         if (p.graph) it.graph = p.graph;
         return it;
       }));

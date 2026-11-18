@@ -189,6 +189,7 @@
               "space": { "$ref": "#/$defs/space" },
               "lined": { "type": "boolean", "description": "Ruled lines for this part (overrides the question's lined)." },
               "template": { "$ref": "#/$defs/partTemplate" },
+              "thinking": { "type": ["boolean", "string"], "description": "A thinking (open-ended) part: true, or the id of its big idea (e.g. \"sun.seeing-past\"). Gets more work space; the key shows possible answers." },
               "graph": { "$ref": "#/$defs/graph" }
             }
           }
