@@ -173,6 +173,9 @@ in its block, and the booklet's thinking frequency (0 when none was given).
 Optional hooks for old files: `upgradeParams(values)` and `upgradeVars(vars)` return
 them in the current form (the library calls them before `validate`, `checkVars` and
 `render`), so a generator can rename or retire an option without breaking saved quizzes.
+Pages that show settings use `G.withDefaults(gen, values)` (defaults filled in, old forms
+such as `thinking: true` mapped, `upgradeParams` applied) and `G.upgradeVars(gen, vars)`,
+so they never repeat these rules.
 
 `render` must be right for **any** vars that pass `checkVars`, not only for the ones
 `pick` would choose, because a teacher can type their own (checked by
