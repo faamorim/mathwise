@@ -21,6 +21,8 @@
     'factoring.js',
     'linear.js',
     'substitution.js',
+    'data/people.js',
+    'data/constants.js',
     'data/planets.js',
     'data/stories-rates.js',
     'data/stories-space.js',

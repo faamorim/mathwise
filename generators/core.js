@@ -129,7 +129,23 @@
   function withDefaults(gen, values) {
     var v = defaults(gen);
     Object.keys(values || {}).forEach(function (k) { v[k] = values[k]; });
+    // Old files: the thinking setting was on/off (docs/generator-api.md, 5b).
+    if (typeof v.thinking === 'boolean' && (gen.params || []).some(function (p) { return p.key === 'thinking' && p.type === 'choice'; })) {
+      v.thinking = v.thinking ? 'random' : 'none';
+    }
+    if (gen.upgradeParams) v = gen.upgradeParams(v) || v;
     return v;
+  }
+  // Old vars of an unlinked question, brought up to date by the generator (optional hook).
+  function upgradedVars(gen, vars) {
+    return gen.upgradeVars ? gen.upgradeVars(JSON.parse(JSON.stringify(vars || {}))) : vars;
+  }
+  // What generate and pick hand a generator as ctx (docs/generator-api.md, section 3).
+  function makeCtx(gen, v, opts) {
+    var ctx = { index: opts.index, count: opts.count, thinking: { frequency: (opts.thinking && Number(opts.thinking.frequency)) || 0 },
+      earlierPrompts: opts.earlierPrompts || {} };
+    ctx.spread = function (key, rng) { return spread(gen, key, v[key], rng, ctx); };
+    return ctx;
   }
 
   // Friendly errors for out-of-range values, then the generator's own checks.
@@ -214,8 +230,7 @@
     var v = withDefaults(gen, values);
     var errs = validate(gen, v);
     if (errs.length) throw new Error(gen.title + ': ' + errs.join(' '));
-    var ctx = { index: opts.index, count: opts.count, spread: function (key, rng) { return spread(gen, key, v[key], rng, ctx); } };
-    var r = gen.generate(v, makeRng(seed), ctx);
+    var r = gen.generate(v, makeRng(seed), makeCtx(gen, v, opts));
     var out = { prompt: r.prompt, workSpace: r.workSpace || gen.workSpace || 1 };
     var output = opts.output || 'steps';
     if (output !== 'none') out.answer = r.answer;
@@ -291,7 +306,7 @@
   function checkVars(gen, vars) {
     if (typeof gen === 'string') gen = get(gen);
     if (!isTemplate(gen)) return [gen.title + ' is not a template.'];
-    vars = vars || {};
+    vars = upgradedVars(gen, vars) || {};
     var errs = [];
     (gen.variables || []).forEach(function (d) {
       if (!varApplies(d, vars)) return;
@@ -315,8 +330,7 @@
     var v = withDefaults(gen, values);
     var errs = validate(gen, v);
     if (errs.length) throw new Error(gen.title + ': ' + errs.join(' '));
-    var ctx = { index: opts.index, count: opts.count, spread: function (key, rng) { return spread(gen, key, v[key], rng, ctx); } };
-    return gen.pick(v, makeRng(seed), ctx);
+    return gen.pick(v, makeRng(seed), makeCtx(gen, v, opts));
   }
 
   // %name% -> the slot or var of that name (scalars only); %% is a literal %.
@@ -340,6 +354,7 @@
   function render(name, vars, opts) {
     var gen = get(name);
     opts = opts || {};
+    vars = upgradedVars(gen, vars);
     var errs = checkVars(gen, vars);
     if (errs.length && opts.noThrow) return { errors: errs };
     if (errs.length) throw new Error(gen.title + ': ' + errs.join(' '));
@@ -364,6 +379,7 @@
   // Names a page may offer as %name% placeholders for these vars.
   function placeholders(name, vars) {
     var gen = get(name);
+    vars = upgradedVars(gen, vars);
     var r = gen.render(JSON.parse(JSON.stringify(vars)));
     var names = Object.keys(vars).filter(function (k) { return vars[k] != null && typeof vars[k] !== 'object'; });
     Object.keys(r.slots || {}).forEach(function (k) { if (names.indexOf(k) < 0) names.push(k); });
@@ -388,6 +404,9 @@
    * opts.output: 'answer' leaves out the worked solutions.
    * Parts get prompt, answer and solution (steps joined one per line).
    * Repeated prompts inside a block are re-rolled deterministically.
+   * opts.thinking: { frequency } for generators whose thinking setting is auto.
+   * opts.earlier: the filled blocks above this one; a part that repeats one of
+   * them is re-rolled too (see repeats).
    * Returns a new block (its `generator` field exactly as given); the input is not changed.
    */
   function fillBlock(block, opts) {
@@ -408,22 +427,9 @@
     if (out.prompt == null) out.prompt = gen.prompt || 'Answer';
     if (out.columns == null && gen.columns) out.columns = gen.columns;
     if (out.space == null) out.space = gen.workSpace || 1;
-    if (gen.whole) {
-      var w = generate(g.name, g.params, partSeed(g.seed, 0), { output: 'steps' });
-      return wholeInto(out, w, steps);
-    }
-    var count = g.count || 4;
-    var seen = {};
-    out.parts = [];
-    for (var i = 0; i < count; i++) {
-      var r, attempt = 0;
-      do {
-        r = generate(g.name, g.params, partSeed(g.seed, i, attempt), { index: i, count: count });
-        attempt++;
-      } while (seen[r.prompt] && attempt < 50);
-      seen[r.prompt] = true;
-      out.parts.push(keepExtras(toItem(r), block.parts && block.parts[i]));
-    }
+    var rolled = rollBlock(g, g.seed, opts, false);
+    if (gen.whole) return wholeInto(out, rolled[0].item, steps);
+    out.parts = rolled.map(function (x, i) { return keepExtras(toItem(x.item), block.parts && block.parts[i]); });
     return out;
   }
 
@@ -435,20 +441,72 @@
     return item;
   }
 
-  // Pick, re-rolling a part whose prompt repeats an earlier part (same rule as fillBlock).
-  function blockVars(g, seed) {
-    var gen = get(g.name);
-    if (gen.whole) return [pick(g.name, g.params, partSeed(seed, 0))];
-    var count = g.count || 4, seen = {}, out = [];
+  // ---------- no repeats (docs/generator-api.md, section 4) ----------
+  // Numbers a story must not share with earlier blocks: numbers in scientific notation
+  // and numbers of 3 or more digits, inside $…$, by value (1.50\times10^{8} = 150\,000\,000).
+  function bigNumbers(text) {
+    var out = [];
+    String(text || '').replace(/\$([^$]*)\$/g, function (m, tex) {
+      var t = tex.replace(/\\[,;:! ]|\{,\}|\s/g, function (x) { return x === '{,}' ? '.' : ''; });
+      t.replace(/(\d+(?:\.\d+)?)\\times10\^\{?(-?\d+)\}?|\d+(?:\.\d+)?/g, function (all, a, e) {
+        var x;
+        if (a) x = Number(a) * Math.pow(10, Number(e));
+        else if (all.replace('.', '').replace(/^0+/, '').length >= 3) x = Number(all);
+        if (x != null && isFinite(x)) out.push(Number(x.toPrecision(6)).toExponential());
+        return all;
+      });
+      return m;
+    });
+    return out;
+  }
+  // What the blocks above show: prompts, the numbers they give, the numbers they answer.
+  function priorOf(earlier) {
+    var p = { prompts: {}, givens: {}, answers: {} };
+    function add(set, text) { bigNumbers(text).forEach(function (n) { set[n] = true; }); }
+    (earlier || []).forEach(function (b) {
+      if (!b || b.kind !== 'question') return;
+      if (b.prompt != null) { p.prompts[b.prompt] = true; add(p.givens, b.prompt); }
+      if (b.answer != null) add(p.answers, b.answer);
+      (b.parts || []).forEach(function (q) {
+        if (q.prompt != null) { p.prompts[q.prompt] = true; add(p.givens, q.prompt); }
+        if (!q.thinking && q.answer != null) add(p.answers, q.answer);
+      });
+    });
+    return p;
+  }
+  // Does this generated item repeat the block so far (seen) or an earlier block?
+  // A story (whole question) also may not give an earlier answer, nor answer an earlier given.
+  function repeats(r, prior, seen, whole) {
+    if (seen[r.prompt] || prior.prompts[r.prompt]) return true;
+    if (!whole) return false;
+    var parts = r.parts || [];
+    var given = bigNumbers(r.prompt), answers = [];
+    parts.forEach(function (q) {
+      given = given.concat(bigNumbers(q.prompt));
+      if (!q.thinking) answers = answers.concat(bigNumbers(q.answer));
+    });
+    if (!r.parts) answers = bigNumbers(r.answer);
+    return given.some(function (n) { return prior.answers[n]; }) || answers.some(function (n) { return prior.givens[n]; });
+  }
+  // The parts of a generator block, each re-rolled (seed "#attempt") while it repeats:
+  // [{ item, vars? }]. withVars: pick the vars too (for unlink), with the same rng use.
+  function rollBlock(g, seed, opts, withVars) {
+    var gen = get(g.name), whole = !!gen.whole;
+    var count = whole ? 1 : (g.count || 4);
+    var prior = priorOf(opts.earlier), seen = {}, out = [];
     for (var i = 0; i < count; i++) {
-      var vars, attempt = 0, p;
+      var o = whole ? { output: 'steps' } : { index: i, count: count };
+      if (opts.thinking) o.thinking = opts.thinking;
+      o.earlierPrompts = prior.prompts;
+      var r, vars, attempt = 0;
       do {
-        vars = pick(g.name, g.params, partSeed(seed, i, attempt), { index: i, count: count });
-        p = gen.render(JSON.parse(JSON.stringify(vars))).prompt;
+        var s = partSeed(seed, i, attempt);
+        if (withVars) { vars = pick(g.name, g.params, s, o); r = gen.render(JSON.parse(JSON.stringify(vars))); }
+        else r = generate(g.name, g.params, s, o);
         attempt++;
-      } while (seen[p] && attempt < 50);
-      seen[p] = true;
-      out.push(vars);
+      } while (attempt < 50 && repeats(r, prior, seen, whole));
+      seen[r.prompt] = true;
+      out.push({ item: r, vars: vars });
     }
     return out;
   }
@@ -468,7 +526,7 @@
     if (!isTemplate(gen)) throw new Error(gen.title + ' is not a template.');
     var seed = blockSeed(block.generator, opts.docSeed, opts.blockNumber);
     var filled = fillBlock(block, opts);
-    var vars = blockVars(block.generator, seed);
+    var vars = rollBlock(block.generator, seed, opts, true).map(function (x) { return x.vars; });
     delete filled.generator;
     filled.template = { name: gen.name, params: withDefaults(gen, block.generator.params) };
     if (gen.whole) filled.template.vars = vars[0];
@@ -500,14 +558,21 @@
   }
 
   // Fill every generator block of a document (other blocks are kept as they are).
-  // A block without its own seed uses the document seed (see blockSeed).
+  // A block without its own seed uses the document seed (see blockSeed); each block
+  // sees the filled blocks above it (no repeats) and the document's thinking frequency.
   function fillDocument(doc, opts) {
     var out = JSON.parse(JSON.stringify(doc));
+    var done = [];
     out.blocks = out.blocks.map(function (b, i) {
-      if (!b.generator && !b.template) return b;
-      var o = { docSeed: doc.seed, blockNumber: i + 1 };
-      if (opts && opts.output) o.output = opts.output;
-      return fillBlock(b, o);
+      var f = b;
+      if (b.generator || b.template) {
+        var o = { docSeed: doc.seed, blockNumber: i + 1, earlier: done };
+        if (doc.thinking) o.thinking = doc.thinking;
+        if (opts && opts.output) o.output = opts.output;
+        f = fillBlock(b, o);
+      }
+      done = done.concat([f]);
+      return f;
     });
     return out;
   }

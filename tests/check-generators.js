@@ -104,6 +104,7 @@ for (const gen of G.list()) {
 {
   const numbersIn = (t) => (String(t).replace(/\\,/g, '').match(/\d+(\.\d+)?/g) || []);
   const stories = G.list().filter((g) => (MW.data.stories || []).some((s) => s.topic + '.' + s.id === g.name));
+  const thinkingSeen = {};
   assert.ok(stories.length >= 6, 'stories registered');
   for (const gen of stories) {
     for (let seed = 0; seed < 150; seed++) {
@@ -118,12 +119,38 @@ for (const gen of G.list()) {
         if (!p.thinking) numbersIn(p.answer).forEach((n) => shown.push(n));
         assert.ok(!/%\w+%/.test(b.prompt + p.prompt + p.answer), gen.name + ' placeholder left: ' + p.prompt);
       });
-      // Thinking questions off: same story and numbers, only calculation parts.
-      const off = G.fillBlock({ kind: 'question', generator: { name: gen.name, params: { thinking: false }, seed: 'st' + seed } });
-      assert.strictEqual(off.prompt, b.prompt, gen.name + ' thinking switch changed the numbers');
-      assert.ok(off.parts.every((p) => !p.thinking) && off.parts.length === b.parts.filter((p) => !p.thinking).length, gen.name + ' thinking off');
+      // The thinking setting never changes the story or its numbers: none has no thinking
+      // part, random exactly one, after the calculations; old on/off files still work.
+      const fill = (params, opts) => { const f = G.fillBlock({ kind: 'question', generator: { name: gen.name, params, seed: 'st' + seed } }, opts); delete f.generator; return f; };
+      const off = fill({ thinking: 'none' }), on = fill({ thinking: 'random' });
+      const calcs = (x) => JSON.stringify(x.parts.filter((p) => !p.thinking));
+      assert.strictEqual(off.prompt, b.prompt, gen.name + ' thinking setting changed the numbers');
+      assert.strictEqual(on.prompt, b.prompt, gen.name + ' thinking setting changed the numbers');
+      assert.ok(calcs(off) === calcs(b) && calcs(on) === calcs(b), gen.name + ' thinking setting changed a calculation');
+      assert.ok(off.parts.every((p) => !p.thinking), gen.name + ' thinking none');
+      assert.ok(on.parts.filter((p) => p.thinking).length === 1 && on.parts[on.parts.length - 1].thinking, gen.name + ' thinking random');
+      assert.strictEqual(JSON.stringify(fill({ thinking: false })), JSON.stringify(off), gen.name + ' old thinking: false');
+      assert.strictEqual(JSON.stringify(fill({ thinking: true })), JSON.stringify(on), gen.name + ' old thinking: true');
+      // Auto follows the booklet frequency: none at 0, the random one at 1, and a question
+      // with a thinking part at 1 in 4 keeps the same one at 1 in 2.
+      assert.ok(b.parts.every((p) => !p.thinking), gen.name + ' auto without a booklet frequency');
+      assert.strictEqual(JSON.stringify(fill({}, { thinking: { frequency: 1 } })), JSON.stringify(on), gen.name + ' frequency 1');
+      const q = fill({}, { thinking: { frequency: 0.25 } }), h = fill({}, { thinking: { frequency: 0.5 } });
+      if (q.parts.some((p) => p.thinking)) assert.strictEqual(JSON.stringify(q), JSON.stringify(h), gen.name + ' frequency keeps its questions');
+      if (q.parts.some((p) => p.thinking)) thinkingSeen[gen.name] = (thinkingSeen[gen.name] || 0) + 1;
+      // Each thinking question can be chosen by its id.
+      for (const id of Object.keys(MW.data.stories.find((st) => st.topic + '.' + st.id === gen.name).thinking || {})) {
+        if (seed > 2) break;
+        const one = fill({ thinking: id });
+        assert.ok(one.prompt === b.prompt && one.parts.filter((p) => p.thinking).length === 1, gen.name + ' thinking ' + id);
+      }
     }
   }
+  for (const gen of stories) assert.ok(thinkingSeen[gen.name] > 10 && thinkingSeen[gen.name] < 70, gen.name + ' frequency 1 in 4: ' + thinkingSeen[gen.name] + ' of 150');
+  // Old unlinked vars (thinking on/off, no precision or wordings) still render.
+  assert.ok(G.render('sci.sunlight', { planet: 'Mars', find: 'speed', thinking: true }).parts[1].thinking, 'old vars: thinking on');
+  assert.strictEqual(G.render('rates.heartbeat', { name: 'Ana', beats: 22, secs: 15, thinking: false }).parts.length, 2, 'old vars: thinking off');
+  assert.ok(!G.validate(G.get('sci.sunlight'), { find: ['speed', 'time'] }).length, 'old params: a piece no longer asked');
   // Calculation spot checks.
   const D = MW.data;
   const val = (d) => Number(MW.sci.mantissa(d.digits)) * Math.pow(10, d.exponent);
@@ -132,9 +159,9 @@ for (const gen of G.list()) {
     const ra = v.wordsA * 60 / v.secsA, rb = v.wordsB / v.minsB;
     const it = G.render('rates.typing-race', v);
     assert.ok(it.parts[0].answer.startsWith(ra > rb ? v.a : v.b), 'typing faster');
-    assert.ok(it.parts[2].answer.includes('$' + MW.math.num(Math.abs(ra - rb) * 60) + '$'), 'typing difference');
+    assert.ok(it.parts[1].answer.includes('$' + MW.math.num(Math.abs(ra - rb) * 60) + '$'), 'typing difference');
     const l = G.pick('sci.light-travel', {}, 'c' + seed);
-    const mins = val(D.planets.items.find((p) => p.name === l.planet).distance) / 3e5 / 60;
+    const mins = val(D.tables.planets.rows.find((p) => p.name === l.planet).meanSunDistance) / val(D.constants.lightSpeed) / 60;
     const got = Number(G.render('sci.light-travel', l).parts[1].answer.replace(/\\,/g, '').match(/[\d.]+/)[0]);
     assert.ok(Math.abs(got - mins) / mins < 0.05, 'light minutes ' + l.planet);
     const s = G.pick('rates.swim-laps', {}, 'c' + seed);
@@ -260,20 +287,21 @@ for (const gen of G.list()) {
 // Fact-family stories: any of the three can be asked; the answer agrees with the givens
 // (product = factor x factor, within rounding) and the steps' numbers are right.
 {
-  const fams = (MW.data.stories || []).filter((s) => s.family);
+  const fams = (MW.data.stories || []).filter((s) => s.relation);
   assert.ok(fams.length >= 4, 'family stories');
   const sciVal = (t) => { const m = /([\d.]+)\\times10\^\{?(-?\d+)\}?/.exec(t); return m && Number(m[1]) * Math.pow(10, Number(m[2])); };
   for (const st of fams) {
-    const name = st.topic + '.' + st.id, keys = [st.family.product].concat(st.family.factors);
+    const name = st.topic + '.' + st.id, keys = [st.relation.product].concat(st.relation.factors).filter((k) => st.pieces[k].question);
+    assert.ok(keys.every((k) => !st.pieces[k].from || !st.pieces[k].from.startsWith('constants.')), name + ' asks for a constant');
     for (let seed = 0; seed < 120; seed++) {
-      const find = keys[seed % 3];
+      const find = keys[seed % keys.length];
       const b = G.fillBlock({ kind: 'question', generator: { name, params: { find: [find] }, seed: 'fam' + seed } });
       const givens = (b.prompt.match(/\$[^$]*\$/g) || []).map(sciVal);
       assert.strictEqual(givens.length, 2, name + ' gives two numbers: ' + b.prompt);
       const got = sciVal(b.parts[0].answer);
-      const want = find === st.family.product ? givens[0] * givens[1] : Math.max(...givens) / Math.min(...givens);
+      const want = find === st.relation.product ? givens[0] * givens[1] : Math.max(...givens) / Math.min(...givens);
       // Dividing: the product is the larger given only when the factor is above 1, so compare both ways.
-      const alt = find === st.family.product ? want : Math.min(...givens) / Math.max(...givens);
+      const alt = find === st.relation.product ? want : Math.min(...givens) / Math.max(...givens);
       if (!(Math.abs(got - want) / want < 0.006 || Math.abs(got - alt) / alt < 0.006)) fails.push(name + ' seed fam' + seed + ' find ' + find + ': ' + b.parts[0].answer + ' from ' + b.prompt);
       assert.ok(!/10\^\{0\}/.test(b.prompt), name + ' has 10^0');
       // Every "= a x 10^n" line in the steps has the same value as the answer (within rounding).
@@ -285,6 +313,73 @@ for (const gen of G.list()) {
       });
     }
   }
+}
+
+// Precision (docs/generator-api.md, 5b): the answer has exactly that many significant
+// digits, the question says so, and showPrecision off hides only that sentence.
+{
+  for (let n = 1; n <= 6; n++) {
+    for (let seed = 0; seed < 40; seed++) {
+      const b = G.fillBlock({ kind: 'question', generator: { name: 'sci.sand-bucket', params: { precision: n }, seed: 'p' + seed } });
+      const m = /\$([\d.]+)\\times10\^\{-?\d+\}\$/.exec(b.parts[0].answer);
+      assert.ok(m && m[1].replace('.', '').length === n, 'precision ' + n + ': ' + b.parts[0].answer);
+      assert.ok(b.parts[0].prompt.includes('Round to ' + n + ' significant digit'), 'precision sentence ' + b.parts[0].prompt);
+      const hid = G.fillBlock({ kind: 'question', generator: { name: 'sci.sand-bucket', params: { precision: n, showPrecision: false }, seed: 'p' + seed } });
+      assert.strictEqual(hid.parts[0].prompt, b.parts[0].prompt.replace(/ Round to .*$/, ''), 'showPrecision off');
+      assert.strictEqual(hid.parts[0].answer, b.parts[0].answer, 'showPrecision changes the answer');
+    }
+  }
+  const pd = G.fillBlock({ kind: 'question', generator: { name: 'sci.planet-distance', params: { precision: 2 }, seed: 'pd' } });
+  assert.ok(/\$\d+\.\d\d\$/.test(pd.parts[1].answer) && pd.parts[1].prompt.endsWith('Round to 2 decimal places.'), 'decimal places ' + pd.parts[1].answer);
+  assert.ok(MW.stories.roundSig({ digits: '9996', exponent: 2 }, 3).exponent === 3, 'rounding up to the next power of ten');
+}
+
+// No repeats in a booklet: a block re-rolls a part that repeats a block above it, and a
+// story never gives an earlier answer (nor answers an earlier given).
+{
+  const sameTwice = { seed: 'nr', blocks: [
+    { kind: 'question', generator: { name: 'sci.to-scientific', params: {}, seed: 'same', count: 6 } },
+    { kind: 'question', generator: { name: 'sci.to-scientific', params: {}, seed: 'same', count: 6 } }] };
+  const d = G.fillDocument(sameTwice);
+  const first = new Set(d.blocks[0].parts.map((p) => p.prompt));
+  assert.ok(d.blocks[1].parts.every((p) => !first.has(p.prompt)), 'second block repeats the first');
+  assert.strictEqual(JSON.stringify(d.blocks[0]), JSON.stringify(G.fillBlock(sameTwice.blocks[0])), 'first block unchanged');
+  // Same as filling block by block with earlier, and unlink agrees with the text.
+  const b2 = G.fillBlock(sameTwice.blocks[1], { earlier: [d.blocks[0]] });
+  assert.strictEqual(JSON.stringify(b2), JSON.stringify(d.blocks[1]), 'fillDocument = fillBlock with earlier');
+  const un = G.unlink(sameTwice.blocks[1], { earlier: [d.blocks[0]] });
+  assert.strictEqual(JSON.stringify(G.fillBlock(un).parts.map((p) => p.prompt)), JSON.stringify(b2.parts.map((p) => p.prompt)), 'unlink with earlier');
+  // Stories: sunlight time first, then distance; the second never gives the first answer.
+  const mathIn = (t) => (String(t).match(/\$[^$]*\$/g) || []);
+  let clashes = 0;
+  for (let seed = 0; seed < 60; seed++) {
+    const doc = { seed: 'sun' + seed, blocks: [
+      { kind: 'question', generator: { name: 'sci.sunlight', params: { find: ['time'] } } },
+      { kind: 'question', generator: { name: 'sci.sunlight', params: { find: ['distance'] } } }] };
+    const f = G.fillDocument(doc);
+    const ans = mathIn(f.blocks[0].parts[0].answer)[0];
+    assert.ok(!f.blocks[1].prompt.includes(ans), 'story gives an earlier answer: ' + ans + ' in ' + f.blocks[1].prompt);
+    const alone = G.fillBlock(doc.blocks[1], { docSeed: doc.seed, blockNumber: 2 });
+    if (alone.prompt.includes(ans)) clashes++;
+    const u = G.unlink(doc.blocks[1], { docSeed: doc.seed, blockNumber: 2, earlier: [f.blocks[0]] });
+    assert.strictEqual(G.fillBlock(u).prompt, f.blocks[1].prompt, 'unlinked story keeps the re-rolled text');
+  }
+  assert.ok(clashes > 0, 'the story test never met a clash');
+  // The same thinking question is not asked twice (the next one in the list is used),
+  // and that never changes the numbers.
+  for (let seed = 0; seed < 30; seed++) {
+    const doc = { seed: 'tq' + seed, thinking: { frequency: 1 }, blocks: [
+      { kind: 'question', generator: { name: 'rates.heartbeat', params: {}, seed: 'h' } },
+      { kind: 'question', generator: { name: 'rates.heartbeat', params: {}, seed: 'h' + seed } }] };
+    const f = G.fillDocument(doc);
+    const t = f.blocks.map((b) => b.parts.find((p) => p.thinking).prompt);
+    assert.ok(t[0] !== t[1], 'thinking question asked twice: ' + t[0]);
+    const alone = G.fillBlock(doc.blocks[1], { thinking: doc.thinking });
+    assert.strictEqual(alone.prompt === f.blocks[1].prompt || f.blocks[1].prompt !== f.blocks[0].prompt, true, 'thinking choice moved the numbers');
+  }
+  // The thinking frequency reaches every block from the document.
+  const th = G.fillDocument({ seed: 't', thinking: { frequency: 1 }, blocks: [{ kind: 'question', generator: { name: 'rates.hose', params: {} } }] });
+  assert.ok(th.blocks[0].parts.some((p) => p.thinking), 'document thinking frequency');
 }
 
 // Friendly messages for vars that do not fit.

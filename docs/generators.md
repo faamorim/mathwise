@@ -90,12 +90,12 @@ Example: `examples/recipes/math9-powers-practice-quiz.json` ->
 | `linear.graph-line` | Graph $y=-\frac23x+1$: empty grid for the student, the line and a table of points in the key | slopes (whole / fractions / zero), negative slopes, largest y-intercept, plane size, **worked steps by** (table of values, y-intercept and slope) |
 | `linear.equation-from-graph` | A line on a grid, write $y=mx+b$ | slopes, negative slopes, largest y-intercept, plane size |
 | `linear.match-graphs` | Matching cards: equations as parts, graphs as cards A, B, C, … made of lines that are easy to mix up (same slope, opposite slope, swapped slope and intercept); key gives the letter and how to tell | slopes, negative slopes, equations to match (3–6), extra cards that match nothing. Unlinked, the teacher can type the lines and the card order |
-| `rates.typing-race` | Two people typing (seconds vs minutes): who is faster, difference in one hour, + thinking parts | thinking questions on/off |
-| `rates.swim-laps` | Laps per hour, time for more laps, + why the rate could change | thinking questions on/off |
-| `rates.hose` | Litres per hour, time to fill the tank, + why it could take longer | thinking questions on/off |
-| `rates.heartbeat` | Beats per minute and per hour, + when the rate changes, why count longer | thinking questions on/off |
-| `sci.planet-distance` | A planet's distance from the Sun (NASA data) in scientific notation, times as far as Earth, + why distances change | thinking questions on/off |
-| `sci.light-travel` | Time for sunlight to reach a planet (seconds, minutes), + seeing the past, rover delays | thinking questions on/off |
+| `rates.typing-race` | Two people typing (seconds vs minutes): who is faster, difference in one hour; thinking: reasons, a real hour | thinking question |
+| `rates.swim-laps` | Laps per hour, time for more laps; thinking: why the rate could change | thinking question |
+| `rates.hose` | Litres per hour, time to fill the tank; thinking: why it could take longer | thinking question |
+| `rates.heartbeat` | Beats per minute and per hour; thinking: when the rate changes, why count longer | thinking question |
+| `sci.planet-distance` | A planet's distance from the Sun (NASA data) in scientific notation, times as far as Earth; thinking: why distances change, why scientific notation | precision (decimal places, default 1), say how to round, thinking question |
+| `sci.light-travel` | Time for sunlight to reach a planet (seconds, minutes); thinking: seeing the past, rover delays | precision (significant digits, default 3), say how to round, thinking question |
 
 Parameters show real values and accepted values (`params` on each generator;
 `G.validate(gen, values)` returns friendly messages). Difficulty presets and
@@ -116,14 +116,17 @@ brackets), then one layer per line (everything whose inputs are already numbers)
 $x^{-n}=\frac{1}{x^n}$ and small powers written out ($(-2)^3=(-2)(-2)(-2)$) as their
 own lines. Example recipe: `examples/recipes/math9-substitution-and-sci-practice.json`.
 
-### Fact families (give two, ask the third)
+### Relation stories (give two, ask the third)
 
-A **family** story is one relation, product = factor × factor (distance = speed × time),
-kept as separate pieces: for each quantity, a sentence that gives it and a question that
-asks for it. The story gives two pieces and asks for the third, so the same story is a
-multiplication (ask for the product) or a division (ask for either factor). Its *What is
-asked* setting picks which; switching it never changes the numbers. Format at the top of
-`generators/data/stories-families.js`; stories so far: `sci.sunlight` (NASA data),
+A **relation** story is one relation, product = factor × factor (distance = speed × time),
+kept as separate pieces: for each quantity, sentences that give it and questions that ask
+for it (several wordings each; the seed picks one). The story gives two pieces and asks
+for the third, so the same story is a multiplication (ask for the product) or a division
+(ask for either factor). Its *What is asked* setting picks which; switching it never
+changes the numbers. A piece without a question (a constant such as the speed of light)
+is never asked. The answer is rounded to the *precision* setting (significant digits,
+default 3), and the question says so unless *Say how to round* is off. Format at the top
+of `generators/data/stories-families.js`; stories so far: `sci.sunlight` (NASA data),
 `sci.spacecraft`, `sci.bacteria-line`, `sci.sand-bucket`.
 
 ## Graphs
@@ -137,24 +140,36 @@ recipe: `examples/recipes/math10-linear-graphs.json`.
 
 ## Story questions and the library
 
-Story questions are one story followed by parts a), b), c) … Some parts are
-**calculations** (worked steps, one answer); others are **thinking** parts with no single
-right answer (the key gives possible answers: any reasonable, backed-up argument is good
-enough). The *Thinking questions* setting turns those parts on or off without changing
-any numbers.
+Story questions are one story followed by **calculation** parts a), b), c) … (worked
+steps, one answer). A story may also list **thinking** questions with no single right
+answer (the key gives possible answers: any reasonable, backed-up argument is good
+enough). At most one is added, after the calculations, by the *Thinking question*
+setting: *Follow the booklet* (the document's frequency: none, 1 in 4, 1 in 2, every
+question; the seed decides which questions), *None*, *Random*, or one chosen by its id.
+None of this ever changes the story or its numbers.
 
 The library is separate from the code. `generators/data/` holds the content:
-`planets.js` (NASA Planetary Fact Sheet, source recorded), `stories-rates.js` and
-`stories-space.js` (the stories; their format is described at the top of
-`stories-rates.js`). `generators/stories.js` is the engine: it turns every story into a
-template named `<topic>.<id>`, so adding a story never means touching code.
 
-In a story every value is marked: a **name**, a number that **varies** (a range or a list
-to choose from), or a **fact** (real data: which planet varies, its distance never does).
-Only names and varying numbers become editable variables; facts stay fixed.
+- shared tables, one per subject, used by every grade and unit: `people.js` (first
+  names), `planets.js` (NASA Planetary Fact Sheet, by column: `meanSunDistance`, …,
+  each column with its unit and source), `constants.js` (the speed of light, …). Within
+  a release, rows and columns are only ever added, so saved questions keep their data;
+- the stories: `stories-rates.js`, `stories-space.js` (calculation stories; format at
+  the top of `stories-rates.js`) and `stories-families.js` (relation stories).
 
-Rule, checked by `tests/check-generators.js`: a part may repeat the givens, never a
-result from an earlier part (no "Would Amira really swim 10 laps?" after asking for 10).
+`generators/stories.js` is the engine: it turns every story into a template named
+`<topic>.<id>`, so adding a story never means touching code.
+
+In a story every value is marked: a **name** (`{ table: 'people' }`), a **row** of a table
+(`{ table: 'planets', needs: ['meanSunDistance'] }`: which planet varies, its distance
+never does; a story names the exact column it reads), or a number that **varies** (a
+range or a list to choose from). Names, rows and varying numbers become editable
+variables; the data itself stays fixed.
+
+Rules, checked by `tests/check-generators.js`: a part may repeat the givens, never a
+result from an earlier part (no "Would Amira really swim 10 laps?" after asking for 10);
+and across a booklet a story never gives an earlier block's answer, nor answers one of
+its givens (`earlier`, contract section 4).
 
 ## Writing a generator (template form)
 

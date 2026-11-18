@@ -118,9 +118,14 @@ A generator whose `thinking` setting is `auto` uses it to decide, from its own r
 stream, whether this question gets a thinking question; the frequency never changes a
 question's numbers. Blocks set to anything but `auto` ignore it.
 
-**No repeats in a booklet:** `fillDocument` re-rolls a question that repeats one earlier in
-the document (same prompt, or a story that would give away another question's answer),
-from the seed, so the same document still always gives the same questions.
+**No repeats in a booklet:** `fillBlock` and `unlink` take `earlier`, the filled blocks
+above this one in document order, and re-roll (from the seed) a part whose prompt equals an
+earlier prompt, or, for story questions, one whose given numbers include an earlier answer or
+whose answers appear among earlier givens. Numbers here are the ones inside `$…$` written
+in scientific notation or with 3 or more digits, compared by value. A part re-rolled for
+this uses the seed `"#attempt"` rule (a block with nothing above it is unchanged). The rule
+reads only the filled text, so hand-edited blocks count too. `fillDocument` applies the same rule, so a block gives the
+same questions in a page as in `tools/generate.js`.
 
 ## 5. Stored form (shared part of the worksheet schema)
 
@@ -145,8 +150,10 @@ the generator. The same keys are used for the vars of an unlinked question.
 
 - A per-part override of `precision` in an unlinked question is a `choice` var whose
   first option is `""` ("same as the question"), never a missing key.
-- Old files: a `thinking` value of `true` is read as `auto` and `false` as `none` by the
-  library (in `validate`, `defaults` and `fillBlock`), so pages never see the old on/off form.
+- Old files: a `thinking` value of `true` is read as `random` (old blocks always had
+  thinking parts) and `false` as `none` by the library (in `validate`, `defaults` and
+  `fillBlock`), so pages never see the old on/off form. A document without `thinking`
+  has frequency 0.
 
 ## 6. Question templates: `variables`, `pick`, `render`
 
@@ -159,6 +166,13 @@ pick(values, rng, ctx) -> vars                      every random choice, as plai
 render(vars)           -> { prompt, answer, steps, slots? }   no randomness at all
 generate               =  render(pick(...))         checked by tests/check-contract.js
 ```
+
+`ctx` is `{ index, count, spread(key, rng), thinking: { frequency } }`: the part's place
+in its block, and the booklet's thinking frequency (0 when none was given).
+
+Optional hooks for old files: `upgradeParams(values)` and `upgradeVars(vars)` return
+them in the current form (the library calls them before `validate`, `checkVars` and
+`render`), so a generator can rename or retire an option without breaking saved quizzes.
 
 `render` must be right for **any** vars that pass `checkVars`, not only for the ones
 `pick` would choose, because a teacher can type their own (checked by

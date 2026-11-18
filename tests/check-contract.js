@@ -51,6 +51,13 @@ gens.forEach((gen) => {
       check(Array.isArray(p.values) && p.values.length > 0 && p.values.every((o) => o.value !== undefined && isStr(o.label)),
         pw('values must be [{ value, label }]'));
     }
+    // Shared setting keys (docs/generator-api.md, 5b): same key, same type and meaning.
+    if (p.key === 'precision') check(p.type === 'number' && p.min === 0 && p.max === 6, pw('precision is a number from 0 to 6'));
+    if (p.key === 'showPrecision') check(p.type === 'toggle' && p.default === true, pw('showPrecision is a toggle, default on'));
+    if (p.key === 'thinking') {
+      const vals = (p.values || []).map((o) => o.value);
+      check(p.type === 'choice' && p.default === 'auto' && ['auto', 'none', 'random'].every((x) => vals.includes(x)), pw('thinking is a choice of auto (default), none, random and ids'));
+    }
   });
   check(G.validate(gen, {}).length === 0, where('defaults do not validate: ' + G.validate(gen, {}).join(' ')));
   check(G.validate(gen, G.defaults(gen)).length === 0, where('defaults() do not validate'));
@@ -123,7 +130,7 @@ gens.forEach((gen) => {
   // Unlinked block shows the same questions, keeps part extras; overrides with placeholders win.
   const stored2 = { kind: 'question', generator: { name: n, params: {}, count: 3, seed: 'u' } };
   const filled = G.fillBlock(stored2);
-  if (filled.parts) filled.parts[1].marks = 2;
+  if (filled.parts && filled.parts[1]) filled.parts[1].marks = 2;
   const un = G.unlink(Object.assign({}, stored2, { parts: filled.parts }));
   check(!un.generator && un.template && un.template.name === n && typeof un.template.params === 'object', where('unlink must give template { name, params }'));
   if (gen.whole) check(un.template.vars && (!un.parts || un.parts.every((p) => !p.template)), where('whole unlink keeps vars on block.template'));
