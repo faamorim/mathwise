@@ -1,64 +1,80 @@
 /*
  * Story library: our solar system (Math 9 scientific notation), on real data from
- * data/planets.js. The planet varies; its facts never change. See stories-rates.js
- * for the format.
+ * the shared tables (data/planets.js, data/constants.js). The planet varies; its
+ * facts never change. See stories-rates.js for the format.
  */
 (function (root) {
   'use strict';
   var D = (root.Mathwise = root.Mathwise || {}).data = root.Mathwise.data || {};
   var S = D.stories = D.stories || [];
-  var REASONABLE = ' Any answer backed up by a reasonable argument is good enough.';
+
+  function dist(F, planet) { return F.cell('planets', planet, 'meanSunDistance'); }
 
   S.push({
     topic: 'sci', id: 'planet-distance', label: 'How far is a planet from the Sun? (NASA data)',
-    source: 'planets',
-    values: { planet: { fact: 'planets', label: 'Planet' } },
+    values: { planet: { table: 'planets', needs: ['meanSunDistance'], label: 'Planet' } },
     ok: function (v) { return v.planet !== 'Earth'; },
     okMessage: 'Choose a planet other than Earth (part b compares it with Earth).',
     stem: 'The mean (average) distance from the Sun to %planet% is about %standard% km. The mean distance from the Sun to Earth is about %earth% km.',
-    given: function (v, D, F) {
-      var d = F.fact('planets', v.planet).distance, e = F.fact('planets', 'Earth').distance;
-      return { standard: F.standard(d), earth: F.sci(e) };
-    },
+    given: function (v, D, F) { return { standard: F.standard(dist(F, v.planet)), earth: F.sci(dist(F, 'Earth')) }; },
+    precision: 1,
+    precisionLabel: 'Round the comparison to (decimal places)',
     parts: [
       { prompt: 'Write the distance from the Sun to %planet% in scientific notation.',
         solve: function (v, F) {
-          var d = F.fact('planets', v.planet).distance;
+          var d = dist(F, v.planet);
           return { steps: ['The decimal point moves ' + d.exponent + ' places left, so the exponent is $' + d.exponent + '$'], answer: '$' + F.sci(d) + '$ km' };
         } },
-      { prompt: 'How many times as far from the Sun as Earth is %planet%? Round sensibly.',
+      { prompt: 'How many times as far from the Sun as Earth is %planet%?', round: 'dp',
         solve: function (v, F) {
-          var d = F.fact('planets', v.planet).distance, e = F.fact('planets', 'Earth').distance;
-          return F.divide(d, e, function (x) { return { answer: 'About $' + x + '$ times as far' }; });
-        } },
-      { prompt: 'The distances are averages. Why does the distance from %planet% to the Sun change?',
-        think: 'Orbits are not perfect circles (they are ellipses), so a planet is sometimes closer to the Sun and sometimes farther.' + REASONABLE },
-      { prompt: 'Why do scientists use scientific notation for distances like these?',
-        think: 'The numbers are huge, with many zeros: scientific notation is shorter, easier to compare, and harder to miscount.' + REASONABLE }
-    ]
+          var d = dist(F, v.planet), e = dist(F, 'Earth');
+          var q = Number(F.mantissa(d.digits)) / Number(F.mantissa(e.digits)), k = d.exponent - e.exponent;
+          var x = F.value(d) / F.value(e), t = F.fixed(x, v.precision);
+          var steps = [
+            '$\\dfrac{' + F.sci(d) + '}{' + F.sci(e) + '}$',
+            '$= \\dfrac{' + F.mantissa(d.digits) + '}{' + F.mantissa(e.digits) + '}\\times10^{' + d.exponent + '-' + e.exponent + '}$',
+          ];
+          var x3 = F.num(Math.round(x * 1000) / 1000);
+          if (k !== 0) steps.push('$\\approx ' + (Math.round(q * 1000) / 1000) + '\\times10^{' + k + '}$');
+          steps.push('$\\approx ' + x3 + '$');
+          if (t !== x3) steps.push('$\\approx ' + t + '$');
+          return { steps: steps, answer: 'About $' + t + '$ times as far' };
+        } }
+    ],
+    thinking: {
+      'why-change': { prompt: 'The distances are averages. Why does the distance from %planet% to the Sun change?',
+        answers: 'Orbits are not perfect circles (they are ellipses), so a planet is sometimes closer to the Sun and sometimes farther.' },
+      'why-sci': { prompt: 'Why do scientists use scientific notation for distances like these?',
+        answers: 'The numbers are huge, with many zeros: scientific notation is shorter, easier to compare, and harder to miscount.' }
+    }
   });
 
   S.push({
     topic: 'sci', id: 'light-travel', label: 'How long does sunlight take to reach a planet? (NASA data)',
-    source: 'planets',
-    values: { planet: { fact: 'planets', label: 'Planet' } },
+    values: { planet: { table: 'planets', needs: ['meanSunDistance'], label: 'Planet' } },
     stem: 'Light travels about %c% km per second. The mean distance from the Sun to %planet% is about %d% km.',
-    given: function (v, D, F) { return { c: F.sci(D.lightSpeed), d: F.sci(F.fact('planets', v.planet).distance) }; },
+    given: function (v, D, F) { return { c: F.sci(F.constant('lightSpeed')), d: F.sci(dist(F, v.planet)) }; },
+    precision: 3,
+    precisionLabel: 'Round the seconds to (significant digits)',
     parts: [
-      { prompt: 'How many seconds does sunlight take to reach %planet%? Use scientific notation.',
-        solve: function (v, F, D) {
-          return F.divide(F.fact('planets', v.planet).distance, D.lightSpeed, function (x, sci) { return { answer: 'About $' + sci + '$ seconds' }; }, true);
+      { prompt: 'How many seconds does sunlight take to reach %planet%? Use scientific notation.', round: 'sig',
+        solve: function (v, F) {
+          var d = dist(F, v.planet), c = F.constant('lightSpeed'), n = Math.max(1, v.precision);
+          var r = F.calc(d, c, 'divide', n);
+          return { steps: ['$\\dfrac{' + F.sci(d) + '}{' + F.sci(c) + '}$'].concat(r.steps), answer: (r.approx ? 'About ' : '') + '$' + F.sciPad(r.result, n) + '$ seconds' };
         } },
-      { prompt: 'About how many minutes is that?',
-        solve: function (v, F, D) {
-          var s = F.value(F.fact('planets', v.planet).distance) / F.value(D.lightSpeed);
-          var m = s / 60, mt = m >= 100 ? String(Math.round(m)) : String(Math.round(m * 10) / 10);
-          return { steps: ['$' + F.round3(s).tex + '\\div60\\approx ' + F.num(Number(mt)) + '$'], answer: 'About $' + F.num(Number(mt)) + '$ minutes' };
-        } },
-      { prompt: 'When you look at the Sun from %planet%, are you seeing the Sun as it is right now? Explain.',
-        think: 'No: the light we see left the Sun a while ago (the travel time), so we see the Sun as it was then.' + REASONABLE },
-      { prompt: 'Radio signals also travel at the speed of light. Why would a live conversation with a rover on %planet% be difficult?',
-        think: 'Each message takes the travel time to arrive and the same again for the reply, so there are long pauses.' + REASONABLE }
-    ]
+      { prompt: 'About how many minutes is that?', round: { dp: 1 },
+        solve: function (v, F) {
+          var s = F.value(dist(F, v.planet)) / F.value(F.constant('lightSpeed'));
+          var shown = F.roundSig(F.fromValue(s), 3), m = F.fixed(s / 60, 1);
+          return { steps: ['$' + F.sciPad(shown, 3) + '\\div60\\approx ' + m + '$'], answer: 'About $' + m + '$ minutes' };
+        } }
+    ],
+    thinking: {
+      'seeing-past': { prompt: 'When you look at the Sun from %planet%, are you seeing the Sun as it is right now? Explain.',
+        answers: 'No: the light we see left the Sun a while ago (the travel time), so we see the Sun as it was then.' },
+      'rover-delay': { prompt: 'Radio signals also travel at the speed of light. Why would a live conversation with a rover on %planet% be difficult?',
+        answers: 'Each message takes the travel time to arrive and the same again for the reply, so there are long pauses.' }
+    }
   });
 })(typeof window !== 'undefined' ? window : this);
