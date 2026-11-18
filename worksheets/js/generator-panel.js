@@ -36,6 +36,13 @@
   function merged(gen, values) {
     var v = lib().defaults(gen);
     Object.keys(values || {}).forEach(function (k) { v[k] = values[k]; });
+    // Old files, read the way the library reads them (docs/generator-api.md, 5b), so the
+    // controls show what is really used: thinking on/off -> random/none, plus any
+    // generator's own upgradeParams hook.
+    if (typeof v.thinking === 'boolean' && (gen.params || []).some(function (p) { return p.key === 'thinking' && p.type === 'choice'; })) {
+      v.thinking = v.thinking ? 'random' : 'none';
+    }
+    if (typeof gen.upgradeParams === 'function') v = gen.upgradeParams(v) || v;
     return v;
   }
 
@@ -133,6 +140,7 @@
    */
   function varControls(gen, vars, onChange) {
     var cur = JSON.parse(JSON.stringify(vars || {}));
+    if (typeof gen.upgradeVars === 'function') cur = gen.upgradeVars(cur) || cur;   // old files
     var msg = h('p', { class: 'error gen-error', hidden: true });
     var row = h('div', { class: 'tmpl-vars' });
 
