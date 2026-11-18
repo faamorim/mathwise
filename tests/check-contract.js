@@ -61,6 +61,7 @@ gens.forEach((gen) => {
   });
   check(G.validate(gen, {}).length === 0, where('defaults do not validate: ' + G.validate(gen, {}).join(' ')));
   check(G.validate(gen, G.defaults(gen)).length === 0, where('defaults() do not validate'));
+  check(JSON.stringify(G.withDefaults(gen, {})) === JSON.stringify(G.withDefaults(gen, G.defaults(gen))), where('withDefaults({}) differs from defaults()'));
 
   // One item, three output levels, deterministic.
   const a = G.generate(n, {}, 'contract', { output: 'steps' });
